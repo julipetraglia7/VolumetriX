@@ -396,6 +396,76 @@
   }
   .res-tiempo .val { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent-cyan); }
 
+  .ganancia-box {
+    background: linear-gradient(135deg, rgba(255,214,10,.12), rgba(255,214,10,.04));
+    border: 1px solid rgba(255,214,10,.35);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    margin: 4px 0 14px;
+  }
+  .ganancia-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ganancia-cap {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 13px;
+    color: var(--accent-yellow);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .ganancia-pct {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--accent-yellow);
+    color: #14091e;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .ganancia-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .ganancia-cards.two { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 500px) {
+    .ganancia-cards.two { grid-template-columns: 1fr; }
+  }
+  .gan-card {
+    background: rgba(255,214,10,.06);
+    border: 1px solid rgba(255,214,10,.2);
+    border-radius: 6px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .gan-label {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .gan-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent-yellow);
+    letter-spacing: -0.01em;
+    word-break: break-word;
+  }
+  .gan-note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: center;
+    line-height: 1.4;
+  }
+
   /* Donut */
   .donut-wrap {
     display: grid;
@@ -826,6 +896,24 @@
       </div>
     </div>
 
+    <div class="ganancia-box">
+      <div class="ganancia-head">
+        <span class="ganancia-cap">💰 Ganancia real (lo que te queda limpio)</span>
+        <span class="ganancia-pct" id="rGananciaPct">—</span>
+      </div>
+      <div class="ganancia-cards" id="gananciaCards">
+        <div class="gan-card">
+          <div class="gan-label">Por unidad</div>
+          <div class="gan-value" id="rGananciaUnidad">—</div>
+        </div>
+        <div class="gan-card" id="rGananciaTotalWrap" style="display:none;">
+          <div class="gan-label">Total pedido</div>
+          <div class="gan-value" id="rGananciaTotal">—</div>
+        </div>
+      </div>
+      <div class="gan-note">Descuenta material, electricidad, desgaste, insumos, diseño, posprocesado y packaging.</div>
+    </div>
+
     <div class="res-tiempo">
       <span>⏱ Tiempo estimado total del pedido</span>
       <span class="val" id="rTiempoTotal">—</span>
@@ -1139,6 +1227,18 @@ function compute() {
   document.getElementById('rPrecioTotal').textContent = fmt(precioTotalPedido);
   document.getElementById('rTiempoTotal').textContent = formatTiempo(tiempoTotalPedido);
 
+  // Ganancia real (lo que queda limpio después de todos los costos)
+  const totalCostosPedido = (totalCostos * cantidad) - (disenioUnaVez ? disenio * (cantidad - 1) : 0);
+  const gananciaTotalPedido = precioTotalPedido - totalCostosPedido;
+  const gananciaPorUnidad = ganancia; // = precioFinal - totalCostos (una unidad)
+  const gananciaPctSobrePrecio = precioTotalPedido > 0 ? (gananciaTotalPedido / precioTotalPedido) * 100 : 0;
+
+  document.getElementById('rGananciaUnidad').textContent = fmt(gananciaPorUnidad);
+  document.getElementById('rGananciaTotal').textContent = fmt(gananciaTotalPedido);
+  document.getElementById('rGananciaTotalWrap').style.display = showTotal ? '' : 'none';
+  document.getElementById('gananciaCards').className = 'ganancia-cards ' + (showTotal ? 'two' : '');
+  document.getElementById('rGananciaPct').textContent = gananciaPctSobrePrecio.toFixed(1) + '% del precio';
+
   // Donut: material, margenError, insumos-group, ganancia — % of precioFinal
   const insumosGroup = extrasPassthrough;
   const parts = [
@@ -1173,7 +1273,8 @@ function compute() {
   // Cache last for copy/download
   state._last = { material, electricidad, desgaste, costosBase, margenError, costoProduccion,
                   insumos, disenio, posprocesado, packaging, extrasPassthrough,
-                  totalCostos, ganancia, precioFinal, precioConComision, pctComision,
+                  totalCostos, totalCostosPedido, ganancia, gananciaTotalPedido, gananciaPctSobrePrecio,
+                  precioFinal, precioConComision, pctComision,
                   tiempoTotalHoras, cantidad, tiempoEnvio, tiempoImpresionTotal, tiempoTotalPedido,
                   precioTotalPedido, disenioUnaVez };
 }
@@ -1480,7 +1581,8 @@ COSTOS (por unidad)
   Posprocesado:        ${fmt(L.posprocesado)}
   Packaging:           ${fmt(L.packaging)}
   ─── Total costos:    ${fmt(L.totalCostos)}
-  Ganancia:            ${fmt(L.ganancia)}
+  Ganancia (por u.):   ${fmt(L.ganancia)}
+${L.cantidad > 1 ? `  Ganancia (pedido):   ${fmt(L.gananciaTotalPedido)}\n` : ''}  ► Margen real:       ${L.gananciaPctSobrePrecio.toFixed(1)}% del precio
 
 ═══════════════════════════════════════
   PRECIO POR UNIDAD:  ${fmt(L.precioFinal)}
