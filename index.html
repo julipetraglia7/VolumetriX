@@ -1541,8 +1541,7 @@ function buildResumenInterno() {
       : '';
     const fils = p.filaments.map(f => {
       const marcaColor = [f.marca, f.color].filter(Boolean).join(' ');
-      const fechaPrecio = f.fechaPrecio ? ` [precio del ${formatFecha(f.fechaPrecio)}]` : '';
-      return `      · ${f.gramos}g${marcaColor ? ' ' + marcaColor : ''} @ ${fmt(f.precioKg)}/kg${fechaPrecio}`;
+      return `      · ${f.gramos}g${marcaColor ? ' ' + marcaColor : ''}`;
     }).join('\n');
     return `  ${i+1}. ${p.name} — ${p.horas}h ${p.minutos}min\n${dims}${fils}`;
   }).join('\n');
@@ -1631,12 +1630,7 @@ function buildCotizacionHTML() {
       [p.alto, p.ancho, p.profundidad].forEach((d, i) => { if (d > 0) arr.push(`${labels[i]} ${d}mm`); });
       partes.push('Tamaño: ' + arr.join(' × '));
     }
-    const colores = p.filaments.map(f => {
-      const s = [];
-      if (f.color) s.push(f.color);
-      if (f.marca) s.push(`(${f.marca})`);
-      return s.join(' ').trim();
-    }).filter(Boolean);
+    const colores = p.filaments.map(f => f.color).filter(Boolean);
     if (colores.length > 0) {
       partes.push('Color de filamento: ' + colores.join(' + '));
     }
