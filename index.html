@@ -1482,6 +1482,229 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 }
 .alert-row.ok { border-left-color: #4ade80; }
 .alert-row.ok .ic { color: #6ee7a7; }
+
+/* ===== Organización ===== */
+.org-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  color: white;
+}
+.org-stats > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 12px;
+  border-right: 1px solid rgba(255,255,255,.18);
+}
+.org-stats > div:last-child { border-right: none; }
+.org-stats b {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+}
+.org-stats span {
+  font-size: 12px;
+  color: rgba(255,255,255,.85);
+  text-transform: lowercase;
+}
+@media (max-width: 700px) {
+  .org-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .org-stats > div { border-right: none; }
+}
+
+.org-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 14px;
+}
+@media (max-width: 1000px) { .org-layout { grid-template-columns: 1fr; } }
+
+/* Calendar */
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-label {
+  text-align: center;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-transform: capitalize;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dow {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+  font-weight: 600;
+}
+.cal-cell {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 4px 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.cal-cell.out { opacity: .35; }
+.cal-cell.today {
+  background: rgba(194,0,122,.15);
+  border-color: var(--accent-magenta);
+  color: var(--text);
+  font-weight: 700;
+}
+.cal-cell .cal-num { font-family: 'JetBrains Mono', monospace; }
+.cal-cell .cal-dots {
+  display: flex;
+  gap: 2px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+.cal-cell .cal-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+}
+.cal-cell .cal-dot.sale { background: #4ade80; }
+.cal-cell .cal-dot.exp { background: var(--accent-orange); }
+.cal-cell .cal-dot.pres { background: var(--accent-yellow); }
+.cal-cell .cal-dot.event { background: var(--accent-magenta); }
+
+/* Tableros list */
+.tab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tab-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-magenta);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.tab-card:hover { background: var(--surface-2); }
+.tab-card h4 {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-family: 'Fredoka', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.tab-card .tab-meta {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tab-card .prog {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  margin-top: 10px;
+  overflow: hidden;
+}
+.tab-card .prog i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-magenta), var(--accent-violet));
+}
+
+/* Kanban */
+.kanban-cols {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 280px;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+.kanban-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 240px;
+}
+.kanban-col h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kanban-col .col-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--surface-3);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.kanban-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kanban-card .k-title { font-weight: 600; font-family: 'Fredoka', sans-serif; }
+.kanban-card .k-meta { font-size: 11px; color: var(--text-faint); display:flex; gap:8px; align-items:center; }
+.kanban-card .k-actions { display:flex; gap:4px; justify-content:flex-end; }
+.kanban-card[draggable=true]:active { cursor: grabbing; opacity: .6; }
+.kanban-col.drop-target { border-color: var(--accent-magenta); background: rgba(194,0,122,.06); }
+
+/* Color swatches (for new board modal) */
+.color-swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.color-sw {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+}
+.color-sw.on { border-color: white; box-shadow: 0 0 0 2px var(--accent-magenta); }
 </style>
 
 </head>
@@ -1547,6 +1770,10 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
       <button class="nav-item" data-view="contabilidad">
         <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15.5 7.5 11l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 7h3.5v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         Contabilidad
+      </button>
+      <button class="nav-item" data-view="organizacion">
+        <span class="ic"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/></svg></span>
+        Organización
       </button>
     </nav>
 
@@ -2209,6 +2436,63 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
       </div>
 
       <div id="cntTabBody" style="margin-top:14px;"></div>
+    </section>
+
+    <!-- ============ ORGANIZACIÓN ============ -->
+    <section class="view" id="view-organizacion">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Planificación</div>
+          <h1>Organización</h1>
+          <div class="sub">Tablero visual de proyectos, calendario y kanban.</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" id="btnOrgEvento">+ Evento</button>
+          <button class="btn primary" id="btnOrgTablero">+ Nuevo tablero</button>
+        </div>
+      </div>
+
+      <!-- Org stats bar -->
+      <div class="org-stats">
+        <div><b id="orgStatTableros">0</b><span>tableros</span></div>
+        <div><b id="orgStatTareas">0</b><span>tareas activas</span></div>
+        <div><b id="orgStatProgreso">0%</b><span>progreso medio</span></div>
+        <div><b id="orgStatPlazos">—</b><span>sin plazos</span></div>
+      </div>
+
+      <!-- Calendar + Tableros side by side -->
+      <div class="org-layout">
+        <div class="card" style="padding:16px;">
+          <div class="cal-head">
+            <h2 style="margin:0; font-size:15px;">📅 Calendario</h2>
+            <div style="display:flex; gap:6px;">
+              <button class="btn small" id="calToday">Hoy</button>
+              <button class="btn small" id="calPrev">‹</button>
+              <button class="btn small" id="calNext">›</button>
+            </div>
+          </div>
+          <div class="cal-label" id="calLabel"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <div>
+          <div class="section-title" style="margin-top:0;"><h2>Tableros</h2></div>
+          <div id="orgTableros"></div>
+        </div>
+      </div>
+
+      <!-- Kanban board (shown when a tablero is opened) -->
+      <div id="orgKanban" style="display:none;">
+        <div class="section-title">
+          <h2 id="orgKanbanTitle">Tablero</h2>
+          <div style="display:flex; gap:8px;">
+            <button class="btn small" id="orgKanbanBack">← Volver</button>
+            <button class="btn small primary" id="orgKanbanAddTask">+ Tarea</button>
+            <button class="btn small danger" id="orgKanbanDel">Eliminar tablero</button>
+          </div>
+        </div>
+        <div class="kanban-cols" id="kanbanCols"></div>
+      </div>
     </section>
 
   </main>
@@ -3222,12 +3506,14 @@ compute();
   const LS_KEY_OLD = 'volumetrix-platform-v1';
   const store = {
     projects: [],
-    inventory: [],   // items: {id, category, tipo, name, marca, color, unidad, stock, umbral, pricePerUnit, proveedor, notas}
+    inventory: [],
     printers: [],
     providers: [],
-    sales: [],       // {id, fecha, descripcion, monto, cobrado (bool), proyectoId}
-    expenses: [],    // {id, fecha, descripcion, monto, categoria}
-    presupuestos: [],// {id, fecha, cliente, descripcion, monto, estado (pendiente/aceptado/rechazado)}
+    sales: [],
+    expenses: [],
+    presupuestos: [],
+    boards: [],   // {id, name, description, color, dueDate, columns:[{id,title,tasks:[{id,title,notes,createdAt}]}], createdAt}
+    events: [],   // {id, fecha, title, color}
     settings: { saldoInicial: 0 },
   };
   function loadLocal(){
@@ -3303,6 +3589,7 @@ compute();
     if (name === 'inventario') renderInventario();
     if (name === 'proveedores') renderProveedores();
     if (name === 'contabilidad') renderContabilidad();
+    if (name === 'organizacion') renderOrganizacion();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   window.vxShowView = showView;
@@ -3736,7 +4023,7 @@ compute();
   function renderProveedores(){
     const body = $('provBody');
     if (store.providers.length === 0) {
-      body.innerHTML = emptyStateHTML('Todavía no tenés proveedores', 'Añadí los proveedores que usás habitualmente para vincularlos a tus materiales.', '🚚');
+      body.innerHTML = emptyStateHTML('Todavía no tenés proveedores', 'Añadí los proveedores que usás habitualmente para vincularlos a tus materiales y gastos.', '🚚');
       return;
     }
     body.innerHTML = '<div class="prov-grid">' + store.providers.map(p => {
@@ -3745,25 +4032,40 @@ compute();
         <div class="prov-head">
           <div class="prov-avatar">${esc(initials)}</div>
           <h4>${esc(p.name)}</h4>
+          <button class="icon-btn" data-prov-edit="${esc(p.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-btn danger" data-prov-del="${esc(p.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
-        ${p.web ? `<a class="prov-link" href="${esc(p.web)}" target="_blank" rel="noopener"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>${esc(p.web.replace(/^https?:\/\//,''))}</a>` : ''}
-        ${p.contacto ? `<div class="prov-meta">📞 ${esc(p.contacto)}</div>` : ''}
-        ${p.notas ? `<div class="prov-meta">${esc(p.notas)}</div>` : ''}
+        ${p.web ? `<a class="prov-link" href="${esc(p.web)}" target="_blank" rel="noopener">🌐 ${esc(p.web.replace(/^https?:\/\//,''))}</a>` : ''}
+        ${p.email ? `<div class="prov-meta">✉ ${esc(p.email)}</div>` : ''}
+        ${p.telefono ? `<div class="prov-meta">📞 ${esc(p.telefono)}</div>` : ''}
+        ${p.materiales ? `<div class="prov-meta">📦 ${esc(p.materiales)}</div>` : ''}
+        ${p.notas ? `<div class="prov-meta" style="opacity:.7;">${esc(p.notas)}</div>` : ''}
       </div>`;
     }).join('') + '</div>';
     body.querySelectorAll('[data-prov-del]').forEach(b => b.onclick = e => deleteProvider(e.currentTarget.dataset.provDel));
+    body.querySelectorAll('[data-prov-edit]').forEach(b => b.onclick = e => {
+      const id = e.currentTarget.dataset.provEdit;
+      const p = store.providers.find(x => x.id === id);
+      openModal(providerFormHTML(p));
+      $('pvSave').onclick = () => saveProvider(p);
+    });
   }
   function providerFormHTML(p){
-    p = p || { id: '', name: '', web: '', contacto: '', notas: '' };
+    p = p || { id: '', name: '', web: '', email: '', telefono: '', materiales: '', notas: '' };
     return `<h3>${p.id ? 'Editar' : 'Añadir'} proveedor</h3>
-      <div class="field"><label>Nombre *</label><input class="input" id="pvName" value="${esc(p.name)}" placeholder="Ej: Grilon3"></div>
-      <div class="field"><label>Sitio web</label><input class="input" id="pvWeb" value="${esc(p.web)}" placeholder="https://…"></div>
-      <div class="field"><label>Contacto (email o tel)</label><input class="input" id="pvContact" value="${esc(p.contacto)}" placeholder="ventas@ejemplo.com"></div>
-      <div class="field"><label>Notas</label><textarea class="input" id="pvNotas" rows="2">${esc(p.notas || '')}</textarea></div>
+      <div class="field"><label>Nombre *</label><input class="input" id="pvName" value="${esc(p.name)}" placeholder="Ej: Mi proveedor local"></div>
+      <div class="field-row">
+        <div class="field"><label>Web</label><input class="input" id="pvWeb" value="${esc(p.web)}" placeholder="https://ejemplo.com"></div>
+        <div class="field"><label>Email</label><input class="input" id="pvEmail" value="${esc(p.email || '')}" placeholder="contacto@proveedor.com"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Teléfono</label><input class="input" id="pvTel" value="${esc(p.telefono || '')}" placeholder="+54 11 0000-0000"></div>
+        <div class="field"><label>Materiales (separados por coma)</label><input class="input" id="pvMats" value="${esc(p.materiales || '')}" placeholder="PLA, PETG, TPU"></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea class="input" id="pvNotas" rows="2" placeholder="Tiempo de entrega, condiciones de pago…">${esc(p.notas || '')}</textarea></div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
-        <button class="btn primary" id="pvSave">${p.id ? 'Guardar cambios' : 'Añadir'}</button>
+        <button class="btn primary" id="pvSave">${p.id ? 'Guardar cambios' : 'Crear proveedor'}</button>
       </div>`;
   }
   async function saveProvider(existing){
@@ -3772,7 +4074,9 @@ compute();
       id,
       name: $('pvName').value.trim() || 'Sin nombre',
       web: $('pvWeb').value.trim(),
-      contacto: $('pvContact').value.trim(),
+      email: $('pvEmail').value.trim(),
+      telefono: $('pvTel').value.trim(),
+      materiales: $('pvMats').value.trim(),
       notas: $('pvNotas').value.trim(),
       createdAt: existing ? existing.createdAt : Date.now(),
     };
@@ -3947,22 +4251,33 @@ compute();
       </div>
       <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="vfSave">Añadir venta</button></div>`;
   }
-  function gastoForm(){
-    return `<h3>Registrar gasto</h3>
+  function gastoForm(existing){
+    const g = existing || { fecha: todayISO(), descripcion: '', monto: 0, categoria: 'Materiales', proveedor: '', numFactura: '', justificante: false, notas: '' };
+    const provOptions = ['<option value="">Sin proveedor asignado</option>'].concat(
+      store.providers.map(p => `<option value="${esc(p.id)}" ${g.proveedor === p.id ? 'selected' : ''}>${esc(p.name)}</option>`)
+    ).join('');
+    return `<h3>${existing ? 'Editar' : 'Nuevo'} gasto</h3>
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:6px 0; font-weight:600;">Información del gasto</div>
+      <div class="field"><label>Descripción</label><input class="input" id="gfDesc" value="${esc(g.descripcion)}" placeholder="Descripción detallada del gasto"></div>
       <div class="field-row">
-        <div class="field"><label>Fecha</label><input class="input" type="date" id="gfFecha" value="${todayISO()}"></div>
-        <div class="field"><label>Monto *</label><input class="input num" type="number" step="0.01" id="gfMonto" value="0"></div>
-      </div>
-      <div class="field"><label>Descripción</label><input class="input" id="gfDesc" placeholder="Ej: Compra de PLA"></div>
-      <div class="field-row">
-        <div class="field"><label>Categoría</label>
+        <div class="field"><label>Base imponible (ARS$) *</label><input class="input num" type="number" step="0.01" id="gfMonto" value="${Number(g.monto)||0}"></div>
+        <div class="field"><label>Categoría *</label>
           <select class="input" id="gfCat">
-            ${['Materiales','Herramientas','Servicios','Publicidad','Envíos','Otros'].map(c => `<option>${c}</option>`).join('')}
+            ${['Materiales','Herramientas','Servicios','Publicidad','Envíos','Alquiler','Impuestos','Otros'].map(c => `<option ${g.categoria===c?'selected':''}>${c}</option>`).join('')}
           </select>
         </div>
-        <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="gfJust" style="accent-color: var(--accent-magenta);">Con justificante (factura)</label></div>
       </div>
-      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="gfSave">Registrar gasto</button></div>`;
+      <div class="field-row">
+        <div class="field"><label>Nº factura prov.</label><input class="input" id="gfFactura" value="${esc(g.numFactura || '')}" placeholder="Ej: 2026/123"></div>
+        <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:22px;"><input type="checkbox" id="gfJust" ${g.justificante ? 'checked' : ''} style="accent-color: var(--accent-magenta);">Tengo el justificante</label></div>
+      </div>
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:14px 0 6px; font-weight:600;">Información adicional</div>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input class="input" type="date" id="gfFecha" value="${esc(g.fecha)}"></div>
+        <div class="field"><label>🚚 Proveedor (opcional)</label><select class="input" id="gfProv">${provOptions}</select></div>
+      </div>
+      <div class="field"><label>Notas adicionales</label><textarea class="input" id="gfNotas" rows="2" placeholder="Información adicional sobre el gasto, justificación, detalles de compra…">${esc(g.notas || '')}</textarea></div>
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="gfSave">${existing ? 'Guardar' : 'Registrar gasto'}</button></div>`;
   }
   function presupuestoForm(){
     return `<h3>Nuevo presupuesto</h3>
@@ -3992,9 +4307,9 @@ compute();
     };
   };
   $('baGasto').onclick = () => {
-    openModal(gastoForm());
+    openModal(gastoForm(), true);
     $('gfSave').onclick = async () => {
-      const data = { id: uid(), fecha: $('gfFecha').value || todayISO(), descripcion: $('gfDesc').value, categoria: $('gfCat').value, justificante: $('gfJust').checked, monto: parseFloat($('gfMonto').value) || 0, createdAt: Date.now() };
+      const data = { id: uid(), fecha: $('gfFecha').value || todayISO(), descripcion: $('gfDesc').value, categoria: $('gfCat').value, justificante: $('gfJust').checked, monto: parseFloat($('gfMonto').value) || 0, numFactura: $('gfFactura').value.trim(), proveedor: $('gfProv').value, notas: $('gfNotas').value.trim(), createdAt: Date.now() };
       store.expenses.push(data); saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('expenses', data.id, data); } catch(e){} }
       closeModal(); renderContabilidad(); renderDashboard(); toast('Gasto registrado ✓');
@@ -4037,6 +4352,266 @@ compute();
   }
   $('btnNuevaVentaHero').onclick = () => { showView('contabilidad'); setTimeout(() => $('baVenta').click(), 100); };
 
+  /* ================= ORGANIZACIÓN ================= */
+  let calDate = new Date();
+  let openBoardId = null;
+  const BOARD_COLORS = ['#C2007A','#F26522','#FFD60A','#4ade80','#4FB0C6','#8B2CA5','#E37DB7','#64748b'];
+  const BOARD_TEMPLATES = {
+    'produccion3d': { name: 'Producción 3D', cols: ['Diseño','Impresión','Postprocesado','Entrega'] },
+    'encargos': { name: 'Gestión de encargos', cols: ['Solicitado','Presupuestado','En producción','Enviado','Entregado'] },
+    'generico': { name: 'Genérico (Kanban clásico)', cols: ['Pendiente','En curso','Hecho'] },
+  };
+
+  function renderOrganizacion(){
+    if (openBoardId) { renderKanban(); return; }
+    // Stats
+    const totalTareas = store.boards.reduce((n, b) => n + b.columns.reduce((m, c) => m + (c.tasks||[]).length, 0), 0);
+    const activeTareas = store.boards.reduce((n, b) => {
+      // count tasks not in the last column (assumed "done")
+      return n + b.columns.slice(0, -1).reduce((m, c) => m + (c.tasks||[]).length, 0);
+    }, 0);
+    let progSum = 0, progCnt = 0;
+    store.boards.forEach(b => {
+      const total = b.columns.reduce((m, c) => m + (c.tasks||[]).length, 0);
+      if (total === 0) return;
+      const done = (b.columns[b.columns.length-1]?.tasks || []).length;
+      progSum += (done / total) * 100;
+      progCnt++;
+    });
+    const progAvg = progCnt > 0 ? Math.round(progSum / progCnt) : 0;
+    const sinPlazos = store.boards.filter(b => !b.dueDate).length;
+    $('orgStatTableros').textContent = store.boards.length;
+    $('orgStatTareas').textContent = activeTareas;
+    $('orgStatProgreso').textContent = progAvg + '%';
+    $('orgStatPlazos').textContent = sinPlazos > 0 ? sinPlazos + ' tab.' : '—';
+
+    renderCalendar();
+    renderBoardsList();
+    $('orgKanban').style.display = 'none';
+    document.querySelector('#view-organizacion .org-layout').style.display = '';
+  }
+
+  function renderCalendar(){
+    const y = calDate.getFullYear(), m = calDate.getMonth();
+    const first = new Date(y, m, 1);
+    const firstDow = (first.getDay() + 6) % 7; // Monday = 0
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const prevDays = new Date(y, m, 0).getDate();
+
+    const monthName = calDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    $('calLabel').textContent = monthName;
+
+    const events = collectCalEvents(y, m);
+    const today = new Date();
+    const isToday = (dd) => today.getFullYear() === y && today.getMonth() === m && today.getDate() === dd;
+
+    const cells = [];
+    // DOW headers
+    ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].forEach(d => cells.push(`<div class="cal-dow">${d}</div>`));
+    // Prev month tail
+    for (let i = firstDow - 1; i >= 0; i--) {
+      cells.push(`<div class="cal-cell out"><span class="cal-num">${prevDays - i}</span></div>`);
+    }
+    // Current
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dots = events[d] || [];
+      const dotsHTML = '<div class="cal-dots">' + dots.slice(0,4).map(t => `<span class="cal-dot ${t}"></span>`).join('') + '</div>';
+      cells.push(`<div class="cal-cell ${isToday(d) ? 'today' : ''}"><span class="cal-num">${String(d).padStart(2,'0')}</span>${dotsHTML}</div>`);
+    }
+    // Fill trailing to complete last week
+    while (cells.length % 7 !== 0 || cells.length < 7 + 7*5) {
+      const last = cells.length - 7;
+      const dayNum = last - (firstDow + daysInMonth) + 1;
+      cells.push(`<div class="cal-cell out"><span class="cal-num">${String(dayNum).padStart(2,'0')}</span></div>`);
+      if (cells.length >= 7 + 7*6) break;
+    }
+    $('calGrid').innerHTML = cells.join('');
+  }
+  function collectCalEvents(y, m){
+    const events = {};
+    const add = (dateStr, type) => {
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (d.getFullYear() === y && d.getMonth() === m) {
+        const day = d.getDate();
+        (events[day] = events[day] || []).push(type);
+      }
+    };
+    store.sales.forEach(s => add(s.fecha, 'sale'));
+    store.expenses.forEach(e => add(e.fecha, 'exp'));
+    store.presupuestos.forEach(p => add(p.fecha, 'pres'));
+    store.events.forEach(e => add(e.fecha, 'event'));
+    store.boards.forEach(b => add(b.dueDate, 'event'));
+    return events;
+  }
+  $('calPrev').onclick = () => { calDate = new Date(calDate.getFullYear(), calDate.getMonth() - 1, 1); renderCalendar(); };
+  $('calNext').onclick = () => { calDate = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1); renderCalendar(); };
+  $('calToday').onclick = () => { calDate = new Date(); renderCalendar(); };
+
+  function renderBoardsList(){
+    const wrap = $('orgTableros');
+    if (store.boards.length === 0) {
+      wrap.innerHTML = emptyStateHTML('Aún no tenés tableros', 'Creá tu primer tablero para organizar proyectos y tareas.', '📋', true);
+      return;
+    }
+    wrap.innerHTML = '<div class="tab-list">' + store.boards.map(b => {
+      const total = b.columns.reduce((n, c) => n + (c.tasks||[]).length, 0);
+      const done = (b.columns[b.columns.length-1]?.tasks || []).length;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      return `<div class="tab-card" data-open="${esc(b.id)}" style="border-left-color:${esc(b.color || '#C2007A')};">
+        <h4>${esc(b.name)}</h4>
+        <div class="tab-meta">
+          <span>${total} tarea${total !== 1 ? 's' : ''}</span>
+          <span>·</span>
+          <span>${pct}% completadas</span>
+          ${b.dueDate ? `<span>·</span><span>📅 ${esc(b.dueDate)}</span>` : ''}
+        </div>
+        <div class="prog"><i style="width:${pct}%"></i></div>
+      </div>`;
+    }).join('') + '</div>';
+    wrap.querySelectorAll('[data-open]').forEach(c => c.onclick = e => openBoard(e.currentTarget.dataset.open));
+  }
+
+  function boardForm(existing){
+    const b = existing || { name: '', description: '', color: BOARD_COLORS[0], dueDate: '', template: 'generico' };
+    return `<h3>${existing ? 'Editar' : 'Nuevo'} tablero</h3>
+      <div class="field"><label>Nombre *</label><input class="input" id="tbName" value="${esc(b.name)}" placeholder="Ej: Producción enero, Encargos web…"></div>
+      <div class="field"><label>Descripción (opcional)</label><input class="input" id="tbDesc" value="${esc(b.description)}" placeholder="Una línea que describa este tablero…"></div>
+      <div class="field"><label>🎨 Color de acento</label>
+        <div class="color-swatches" id="tbColors">
+          ${BOARD_COLORS.map(c => `<div class="color-sw ${b.color===c?'on':''}" data-c="${c}" style="background:${c};">${b.color===c?'✓':''}</div>`).join('')}
+        </div>
+      </div>
+      <div class="field"><label>📅 Fecha objetivo (opcional)</label><input class="input" type="date" id="tbDue" value="${esc(b.dueDate || '')}"></div>
+      ${existing ? '' : `<div class="field"><label>Plantilla de columnas</label>
+        <select class="input" id="tbTpl">
+          ${Object.entries(BOARD_TEMPLATES).map(([k,v]) => `<option value="${k}" ${b.template===k?'selected':''}>${esc(v.name)} — ${v.cols.join(' → ')}</option>`).join('')}
+        </select>
+      </div>`}
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="tbSave">${existing ? 'Guardar' : 'Crear tablero'}</button></div>`;
+  }
+  function wireBoardForm(existing){
+    // Swatches
+    document.querySelectorAll('#tbColors .color-sw').forEach(sw => sw.onclick = () => {
+      document.querySelectorAll('#tbColors .color-sw').forEach(x => { x.classList.remove('on'); x.textContent = ''; });
+      sw.classList.add('on'); sw.textContent = '✓';
+    });
+    $('tbSave').onclick = async () => {
+      const chosenSw = document.querySelector('#tbColors .color-sw.on');
+      const color = chosenSw ? chosenSw.dataset.c : BOARD_COLORS[0];
+      const id = existing ? existing.id : uid();
+      const name = $('tbName').value.trim() || 'Sin nombre';
+      const tpl = existing ? null : ($('tbTpl') ? $('tbTpl').value : 'generico');
+      const cols = existing ? existing.columns : BOARD_TEMPLATES[tpl].cols.map(t => ({ id: uid(), title: t, tasks: [] }));
+      const data = {
+        id, name, description: $('tbDesc').value.trim(), color,
+        dueDate: $('tbDue').value || '',
+        columns: cols,
+        createdAt: existing ? existing.createdAt : Date.now(),
+      };
+      const idx = store.boards.findIndex(x => x.id === id);
+      if (idx > -1) store.boards[idx] = data; else store.boards.push(data);
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('boards', id, data); } catch(e){} }
+      closeModal(); renderOrganizacion(); toast('Tablero guardado ✓');
+    };
+  }
+  $('btnOrgTablero').onclick = () => { openModal(boardForm(), true); wireBoardForm(null); };
+
+  function openBoard(id){ openBoardId = id; renderKanban(); }
+  $('orgKanbanBack').onclick = () => { openBoardId = null; renderOrganizacion(); };
+  $('orgKanbanDel').onclick = async () => {
+    if (!openBoardId || !confirm('¿Eliminar este tablero y todas sus tareas?')) return;
+    store.boards = store.boards.filter(b => b.id !== openBoardId);
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc('boards', openBoardId).catch(()=>{});
+    openBoardId = null;
+    renderOrganizacion(); toast('Tablero eliminado');
+  };
+  $('orgKanbanAddTask').onclick = () => {
+    const b = store.boards.find(x => x.id === openBoardId); if (!b) return;
+    const t = prompt('Título de la tarea:');
+    if (!t) return;
+    b.columns[0].tasks.push({ id: uid(), title: t, notes: '', createdAt: Date.now() });
+    saveBoardAndRender(b);
+  };
+  async function saveBoardAndRender(b){
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('boards', b.id, b); } catch(e){} }
+    renderKanban();
+  }
+  function renderKanban(){
+    const b = store.boards.find(x => x.id === openBoardId);
+    if (!b) { openBoardId = null; renderOrganizacion(); return; }
+    document.querySelector('#view-organizacion .org-layout').style.display = 'none';
+    $('orgKanban').style.display = '';
+    $('orgKanbanTitle').textContent = b.name;
+    $('orgKanbanTitle').style.borderLeft = `4px solid ${b.color || '#C2007A'}`;
+    $('orgKanbanTitle').style.paddingLeft = '10px';
+    const wrap = $('kanbanCols');
+    wrap.innerHTML = b.columns.map((c, ci) => `
+      <div class="kanban-col" data-col="${ci}">
+        <h3>${esc(c.title)} <span class="col-count">${(c.tasks||[]).length}</span></h3>
+        ${(c.tasks || []).map((t, ti) => `
+          <div class="kanban-card" draggable="true" data-col="${ci}" data-task="${ti}" style="border-left-color:${esc(b.color || '#C2007A')};">
+            <div class="k-title">${esc(t.title)}</div>
+            ${t.notes ? `<div class="k-meta">${esc(t.notes)}</div>` : ''}
+            <div class="k-actions">
+              ${ci > 0 ? `<button class="icon-btn" data-move="prev" data-c="${ci}" data-t="${ti}" title="←">←</button>` : ''}
+              ${ci < b.columns.length - 1 ? `<button class="icon-btn" data-move="next" data-c="${ci}" data-t="${ti}" title="→">→</button>` : ''}
+              <button class="icon-btn danger" data-del="1" data-c="${ci}" data-t="${ti}">✕</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+    // Move buttons
+    wrap.querySelectorAll('[data-move]').forEach(bt => bt.onclick = e => {
+      const ci = +e.currentTarget.dataset.c, ti = +e.currentTarget.dataset.t;
+      const dir = e.currentTarget.dataset.move === 'next' ? 1 : -1;
+      const task = b.columns[ci].tasks.splice(ti, 1)[0];
+      b.columns[ci + dir].tasks.push(task);
+      saveBoardAndRender(b);
+    });
+    wrap.querySelectorAll('[data-del]').forEach(bt => bt.onclick = e => {
+      const ci = +e.currentTarget.dataset.c, ti = +e.currentTarget.dataset.t;
+      if (!confirm('¿Eliminar tarea?')) return;
+      b.columns[ci].tasks.splice(ti, 1);
+      saveBoardAndRender(b);
+    });
+    // Drag & drop
+    let drag = null;
+    wrap.querySelectorAll('.kanban-card').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        drag = { col: +card.dataset.col, task: +card.dataset.task };
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => drag = null);
+    });
+    wrap.querySelectorAll('.kanban-col').forEach(col => {
+      col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drop-target'); });
+      col.addEventListener('dragleave', () => col.classList.remove('drop-target'));
+      col.addEventListener('drop', e => {
+        e.preventDefault();
+        col.classList.remove('drop-target');
+        if (!drag) return;
+        const dst = +col.dataset.col;
+        if (dst === drag.col) return;
+        const t = b.columns[drag.col].tasks.splice(drag.task, 1)[0];
+        b.columns[dst].tasks.push(t);
+        saveBoardAndRender(b);
+      });
+    });
+  }
+  $('btnOrgEvento').onclick = () => {
+    const title = prompt('Título del evento:'); if (!title) return;
+    const fecha = prompt('Fecha (YYYY-MM-DD):', todayISO()); if (!fecha) return;
+    const ev = { id: uid(), title, fecha, createdAt: Date.now() };
+    store.events.push(ev); saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { window.cloudSync.saveDoc('events', ev.id, ev); } catch(e){} }
+    renderCalendar(); toast('Evento agregado ✓');
+  };
+
   /* ================= Login gate handling ================= */
   const HIDE_GATE_KEY = 'volumetrix-skip-login';
   function showAppShell(){
@@ -4067,6 +4642,7 @@ compute();
     if (active.id === 'view-inventario') renderInventario();
     if (active.id === 'view-proveedores') renderProveedores();
     if (active.id === 'view-contabilidad') renderContabilidad();
+    if (active.id === 'view-organizacion') renderOrganizacion();
   };
 
   // Wire sidebar login buttons
@@ -4154,7 +4730,7 @@ if (btnLogin) btnLogin.onclick = async () => {
 const btnLogout = $('btnLogout');
 if (btnLogout) btnLogout.onclick = () => signOut(auth);
 
-const COLLECTIONS = ['projects', 'inventory', 'printers', 'providers', 'sales', 'expenses', 'presupuestos', 'settings'];
+const COLLECTIONS = ['projects', 'inventory', 'printers', 'providers', 'sales', 'expenses', 'presupuestos', 'boards', 'events', 'settings'];
 
 onAuthStateChanged(auth, async user => {
   currentUser = user;
