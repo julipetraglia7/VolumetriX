@@ -1179,6 +1179,311 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 .wrap { max-width: 100%; }
 </style>
 
+<style>
+/* ===== Tabs bar ===== */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  overflow-x: auto;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(194,0,122,.22), rgba(139,44,165,.14));
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent-magenta);
+}
+
+/* ===== Chip filters ===== */
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.chip:hover { color: var(--text); border-color: var(--focus); }
+.chip.active {
+  background: var(--accent-magenta);
+  border-color: var(--accent-magenta);
+  color: white;
+}
+
+/* ===== Big action cards (contabilidad) ===== */
+.big-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+@media (max-width: 800px) { .big-actions { grid-template-columns: 1fr; } }
+.big-action {
+  background: var(--surface);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: 22px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  text-align: center;
+  transition: border-color .15s, background .15s, transform .08s;
+}
+.big-action:hover { border-color: var(--accent-magenta); background: var(--surface-2); }
+.big-action:active { transform: scale(.98); }
+.big-action.primary {
+  background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
+  border: 1px solid var(--accent-magenta);
+  color: white;
+}
+.big-action .ba-ic { font-size: 26px; }
+.big-action .ba-lbl { font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600; }
+.big-action .ba-sub { font-size: 11.5px; color: var(--text-muted); font-weight: 500; }
+.big-action.primary .ba-sub { color: rgba(255,255,255,.75); }
+
+/* ===== Inventory rows ===== */
+.inv-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.inv-row:last-child { border-bottom: none; }
+.inv-row:hover { background: rgba(255,255,255,.02); }
+.inv-swatch {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+.inv-name {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+.inv-name b {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Fredoka', sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-name span {
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+.inv-stock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.inv-stock.low { color: #fca5a5; border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+.inv-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent-yellow);
+  white-space: nowrap;
+}
+.inv-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.inv-actions { display: flex; gap: 4px; }
+@media (max-width: 700px) {
+  .inv-row { grid-template-columns: 40px 1fr auto; }
+  .inv-row .inv-price, .inv-row .inv-tag { display: none; }
+}
+
+/* ===== Provider cards ===== */
+.prov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.prov-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prov-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.prov-avatar {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-magenta), var(--accent-violet));
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  flex: none;
+}
+.prov-card h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14.5px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prov-card .prov-link {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  word-break: break-all;
+}
+.prov-card .prov-link:hover { text-decoration: underline; }
+.prov-card .prov-meta {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ===== Modal wide variant ===== */
+.modal.wide { max-width: 600px; }
+.modal .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 500px) {
+  .modal .field-row { grid-template-columns: 1fr; }
+}
+.modal .seg-pick {
+  display: flex; gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+.modal .seg-pick button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.modal .seg-pick button.on {
+  background: var(--accent-magenta);
+  color: white;
+  font-weight: 600;
+}
+.color-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-pick input[type="color"] {
+  width: 36px; height: 36px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+/* ===== Empty-state variations ===== */
+.empty-state.compact {
+  padding: 30px 20px;
+}
+.empty-state.compact .blob {
+  width: 44px; height: 44px; font-size: 18px;
+}
+
+/* ===== 6-col stat grid responsive ===== */
+@media (max-width: 1100px) {
+  #cntKpis { grid-template-columns: repeat(3, 1fr) !important; }
+}
+@media (max-width: 600px) {
+  #cntKpis { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ===== Salud fiscal / pendientes rows ===== */
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-yellow);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.alert-row .ic { color: var(--accent-yellow); flex: none; }
+.alert-row .ok { color: #6ee7a7; }
+.alert-row .msg { flex: 1; font-size: 13px; color: var(--text); }
+.alert-row .count {
+  background: var(--accent-yellow);
+  color: #14091e;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.alert-row.ok { border-left-color: #4ade80; }
+.alert-row.ok .ic { color: #6ee7a7; }
+</style>
+
 </head>
 <body>
 
@@ -1189,7 +1494,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   <div class="card" data-accent="magenta">
     <div class="brand-mark">V</div>
     <h1>VolumetriX</h1>
-    <p>Iniciá sesión con Google para sincronizar tus proyectos, materiales y ventas en la nube.<br>Podés acceder desde cualquier dispositivo.</p>
+    <p>Iniciá sesión con Google para sincronizar tus proyectos, inventario, contabilidad y proveedores en la nube.<br>Podés acceder desde cualquier dispositivo.</p>
     <button class="btn primary" id="btnLoginGate">
       <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right:4px;">
         <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
@@ -1230,13 +1535,18 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M3 6.2a1.5 1.5 0 0 1 1.5-1.5H8l1.4 1.7h6.1A1.5 1.5 0 0 1 17 7.9v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.9V6.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
         Proyectos
       </button>
-      <button class="nav-item" data-view="materiales">
+      <div class="nav-label">Gestión</div>
+      <button class="nav-item" data-view="inventario">
         <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="m10 2.5 6.5 3.75v7.5L10 17.5l-6.5-3.75v-7.5L10 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3.5 6.25 10 10l6.5-3.75M10 10v7.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
-        Materiales &amp; Máquinas
+        Inventario
       </button>
-      <button class="nav-item" data-view="finanzas">
+      <button class="nav-item" data-view="proveedores">
+        <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M4 8h12v8H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 8 6 4h8l2 4M9 12h2" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+        Proveedores
+      </button>
+      <button class="nav-item" data-view="contabilidad">
         <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M3 15.5 7.5 11l3 3 6-6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 7h3.5v3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        Ventas &amp; Gastos
+        Contabilidad
       </button>
     </nav>
 
@@ -1275,7 +1585,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         <div>
           <div class="eyebrow">✨ VolumetriX</div>
           <h1>Tu plataforma de impresión 3D</h1>
-          <p>Calculá el precio justo, guardá tus proyectos y llevá el control de ventas y gastos, todo en un mismo lugar.</p>
+          <p>Calculá el precio justo, gestioná inventario, proveedores y contabilidad, todo en un mismo lugar.</p>
         </div>
         <div class="hero-actions">
           <button class="btn primary" id="btnNuevoProyectoHero">+ Nuevo proyecto</button>
@@ -1752,85 +2062,153 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
       <div id="proyectosBody"></div>
     </section>
 
-    <!-- ============ MATERIALES & MÁQUINAS ============ -->
-    <section class="view" id="view-materiales">
+    <!-- ============ INVENTARIO ============ -->
+    <section class="view" id="view-inventario">
       <div class="page-head">
         <div>
-          <div class="eyebrow">Biblioteca</div>
-          <h1>Materiales &amp; Máquinas</h1>
-          <div class="sub">Precios de filamento/resina e impresoras, listos para usar en la calculadora.</div>
+          <div class="eyebrow">Stock</div>
+          <h1>Inventario</h1>
+          <div class="sub">Gestioná el stock de tus materiales, productos, postprocesado e impresoras.</div>
+        </div>
+        <button class="btn primary" id="btnInvAdd">+ Agregar</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar" id="invTabs">
+        <button class="tab-btn active" data-tab="materiales">Materiales</button>
+        <button class="tab-btn" data-tab="productos">Productos</button>
+        <button class="tab-btn" data-tab="postprocesado">Postprocesado</button>
+        <button class="tab-btn" data-tab="impresoras">Impresoras</button>
+      </div>
+
+      <!-- Stat tiles -->
+      <div class="stat-grid" id="invStats" style="grid-template-columns:repeat(4,1fr); margin-top:14px;">
+        <div class="stat-tile" data-a="violet">
+          <div class="top"><span class="label">Total items</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="m10 2.5 6.5 3.75v7.5L10 17.5l-6.5-3.75v-7.5L10 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+          </div>
+          <span class="value" id="invStatTotal">0</span>
+        </div>
+        <div class="stat-tile" data-a="orange">
+          <div class="top"><span class="label">Stock bajo</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3 3 16h14L10 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 8v4M10 14v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          </div>
+          <span class="value" id="invStatBajo">0</span>
+        </div>
+        <div class="stat-tile" data-a="cyan">
+          <div class="top"><span class="label">Filamentos</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.6"/></svg></span>
+          </div>
+          <span class="value" id="invStatFil">0</span>
+        </div>
+        <div class="stat-tile" data-a="magenta">
+          <div class="top"><span class="label">Resinas</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M8 3h4l1 3v3l-1 8H8L7 9V6l1-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+          </div>
+          <span class="value" id="invStatRes">0</span>
         </div>
       </div>
 
-      <div class="two-col">
-        <div class="card" data-accent="cyan">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-            <h2 style="margin:0;"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L12 3 4 7l8 4 8-4z"/><path d="M4 7v10l8 4 8-4V7"/></svg></span>Materiales</h2>
-            <button class="btn small primary" id="btnAddMaterial">+ Añadir</button>
-          </div>
-          <table class="simple" id="tblMateriales">
-            <thead><tr><th>Nombre</th><th>Tipo</th><th style="text-align:right;">Precio/kg</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
+      <div class="toolbar">
+        <div class="search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="invSearch" placeholder="Buscar por nombre, tipo o marca…">
         </div>
-        <div class="card" data-accent="violet">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-            <h2 style="margin:0;"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>Impresoras</h2>
-            <button class="btn small primary" id="btnAddImpresora">+ Añadir</button>
-          </div>
-          <table class="simple" id="tblImpresoras">
-            <thead><tr><th>Nombre</th><th>Consumo</th><th style="text-align:right;">Amort./h</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
+        <div class="chip-row" id="invChips">
+          <button class="chip active" data-filter="all">Todos</button>
+          <button class="chip" data-filter="Filamento">Filamentos</button>
+          <button class="chip" data-filter="Resina">Resinas</button>
+          <button class="chip" data-filter="Otro">Otros</button>
         </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div id="invBody" style="padding:14px;"></div>
       </div>
     </section>
 
-    <!-- ============ FINANZAS ============ -->
-    <section class="view" id="view-finanzas">
+    <!-- ============ PROVEEDORES ============ -->
+    <section class="view" id="view-proveedores">
       <div class="page-head">
         <div>
-          <div class="eyebrow">Contabilidad simple</div>
-          <h1>Ventas &amp; Gastos</h1>
-          <div class="sub">Registrá lo que entra y sale — para ver la salud del negocio.</div>
+          <div class="eyebrow">Contactos</div>
+          <h1>Mis proveedores</h1>
+          <div class="sub">Gestioná los proveedores que usás habitualmente para tus materiales.</div>
+        </div>
+        <button class="btn primary" id="btnProvAdd">+ Añadir proveedor</button>
+      </div>
+      <div id="provBody"></div>
+    </section>
+
+    <!-- ============ CONTABILIDAD ============ -->
+    <section class="view" id="view-contabilidad">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Finanzas</div>
+          <h1>Contabilidad</h1>
+          <div class="sub">Gestioná tus ventas, gastos y análisis financiero.</div>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn" id="btnAddGasto">+ Gasto</button>
-          <button class="btn primary" id="btnAddVenta">+ Venta</button>
+          <button class="btn" id="cntSaldoInit">💼 Saldo inicial</button>
         </div>
       </div>
 
-      <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <!-- KPI grid (6 tiles) -->
+      <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);" id="cntKpis">
         <div class="stat-tile" data-a="green">
-          <div class="top"><span class="label">Ingresos totales</span></div>
-          <span class="value" id="finIngresos">$0</span>
-        </div>
-        <div class="stat-tile" data-a="orange">
-          <div class="top"><span class="label">Gastos totales</span></div>
-          <span class="value" id="finGastos">$0</span>
+          <div class="top"><span class="label">Ingresos cobrados</span></div>
+          <span class="value" id="kpiCobrado">$0</span>
         </div>
         <div class="stat-tile" data-a="yellow">
-          <div class="top"><span class="label">Balance</span></div>
-          <span class="value" id="finBalance">$0</span>
+          <div class="top"><span class="label">Pendiente de cobro</span></div>
+          <span class="value" id="kpiPendiente">$0</span>
+        </div>
+        <div class="stat-tile" data-a="violet">
+          <div class="top"><span class="label">Beneficio neto</span></div>
+          <span class="value" id="kpiBeneficio">$0</span>
+        </div>
+        <div class="stat-tile" data-a="magenta">
+          <div class="top"><span class="label">Margen promedio</span></div>
+          <span class="value" id="kpiMargen">0%</span>
+        </div>
+        <div class="stat-tile" data-a="orange">
+          <div class="top"><span class="label">$/hora</span></div>
+          <span class="value" id="kpiPorHora">$0</span>
+        </div>
+        <div class="stat-tile" data-a="cyan">
+          <div class="top"><span class="label">Saldo inicial</span></div>
+          <span class="value" id="kpiSaldo">$0</span>
         </div>
       </div>
 
-      <div class="two-col">
-        <div class="card" data-accent="green">
-          <h2 style="margin:0 0 14px;"><span class="ico" style="color:#4ade80;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15.5 7.5 11l3 3 6-6.5"/></svg></span>Ventas</h2>
-          <table class="simple" id="tblVentas">
-            <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="card" data-accent="orange">
-          <h2 style="margin:0 0 14px;"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 7.5 13l3-3 6 6.5"/></svg></span>Gastos</h2>
-          <table class="simple" id="tblGastos">
-            <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
+      <!-- Big action cards -->
+      <div class="big-actions">
+        <button class="big-action" id="baPresupuesto">
+          <span class="ba-ic">📄</span>
+          <span class="ba-lbl">Nuevo presupuesto</span>
+          <span class="ba-sub">Cotización sin cobrar aún</span>
+        </button>
+        <button class="big-action primary" id="baVenta">
+          <span class="ba-ic">💸</span>
+          <span class="ba-lbl">Crear venta</span>
+          <span class="ba-sub">Ingreso cobrado o pendiente</span>
+        </button>
+        <button class="big-action" id="baGasto">
+          <span class="ba-ic">🧾</span>
+          <span class="ba-lbl">Registrar gasto</span>
+          <span class="ba-sub">Compra, servicio o insumo</span>
+        </button>
       </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar" id="cntTabs">
+        <button class="tab-btn active" data-tab="inicio">Inicio</button>
+        <button class="tab-btn" data-tab="ventas">Ventas</button>
+        <button class="tab-btn" data-tab="gastos">Gastos</button>
+        <button class="tab-btn" data-tab="presupuestos">Presupuestos</button>
+      </div>
+
+      <div id="cntTabBody" style="margin-top:14px;"></div>
     </section>
 
   </main>
@@ -2815,8 +3193,8 @@ compute();
 
 
 /* ============================================================
-   VolumetriX Plataforma — navigation + dashboard + CRUD views
-   Uses window.appState / window.mergeCloudProfiles from base calc.
+   VolumetriX Plataforma — nav + dashboard + inventario +
+   proveedores + contabilidad (versión 2)
    ============================================================ */
 (function(){
   "use strict";
@@ -2826,10 +3204,10 @@ compute();
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
   const todayISO = () => new Date().toISOString().slice(0, 10);
   const fmtMoney = (n, cur='ARS') => {
-    const cfg = { ARS: 'es-AR', USD: 'en-US', EUR: 'de-DE' };
-    const sym = { ARS: 'ARS $', USD: 'US$', EUR: '€' };
+    const loc = { ARS: 'es-AR', USD: 'en-US', EUR: 'de-DE' }[cur] || 'es-AR';
+    const sym = { ARS: 'ARS $', USD: 'US$', EUR: '€' }[cur] || '$';
     if (!isFinite(n)) n = 0;
-    return (sym[cur] || '$') + ' ' + Math.round(n).toLocaleString(cfg[cur] || 'es-AR');
+    return sym + ' ' + Math.round(n).toLocaleString(loc);
   };
   function toast(msg) {
     const t = $('toast');
@@ -2840,18 +3218,50 @@ compute();
   }
 
   /* ================= Data store ================= */
-  const LS_KEY = 'volumetrix-platform-v1';
+  const LS_KEY = 'volumetrix-platform-v2';
+  const LS_KEY_OLD = 'volumetrix-platform-v1';
   const store = {
     projects: [],
-    materials: [],
+    inventory: [],   // items: {id, category, tipo, name, marca, color, unidad, stock, umbral, pricePerUnit, proveedor, notas}
     printers: [],
-    sales: [],
-    expenses: [],
+    providers: [],
+    sales: [],       // {id, fecha, descripcion, monto, cobrado (bool), proyectoId}
+    expenses: [],    // {id, fecha, descripcion, monto, categoria}
+    presupuestos: [],// {id, fecha, cliente, descripcion, monto, estado (pendiente/aceptado/rechazado)}
+    settings: { saldoInicial: 0 },
   };
   function loadLocal(){
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) Object.assign(store, JSON.parse(raw));
+      if (raw) { Object.assign(store, JSON.parse(raw)); return; }
+      // Migrate from v1
+      const rawOld = localStorage.getItem(LS_KEY_OLD);
+      if (rawOld) {
+        const old = JSON.parse(rawOld);
+        store.projects = old.projects || [];
+        store.printers = old.printers || [];
+        store.sales = (old.sales || []).map(s => ({ ...s, cobrado: s.cobrado !== false }));
+        store.expenses = old.expenses || [];
+        // Migrate materials → inventory items
+        (old.materials || []).forEach(m => {
+          store.inventory.push({
+            id: m.id || uid(),
+            category: m.type === 'Resina' ? 'Resina' : 'Filamento',
+            tipo: 'PLA',
+            name: m.name || 'Sin nombre',
+            marca: '',
+            color: '#666666',
+            unidad: 'g',
+            stock: 1000,
+            umbral: 100,
+            pricePerUnit: (m.pricePerKg || 0) / 1000,
+            pricePerKg: m.pricePerKg || 0,
+            proveedor: '',
+            notas: '',
+            createdAt: m.createdAt || Date.now(),
+          });
+        });
+      }
     } catch (e) {}
   }
   function saveLocal(){
@@ -2864,10 +3274,10 @@ compute();
         { id: uid(), name: 'Bambu Lab A1', wattage: 100, amortPerHour: 180, createdAt: Date.now() },
       );
     }
-    if (store.materials.length === 0) {
-      store.materials.push(
-        { id: uid(), name: 'PLA Grilon3', type: 'Filamento', pricePerKg: 20300, createdAt: Date.now() },
-        { id: uid(), name: 'PETG genérico', type: 'Filamento', pricePerKg: 24000, createdAt: Date.now() },
+    if (store.inventory.length === 0) {
+      store.inventory.push(
+        { id: uid(), category: 'Filamento', tipo: 'PLA', name: 'PLA Grilon3 Negro', marca: 'Grilon3', color: '#000000', unidad: 'g', stock: 950, umbral: 200, pricePerUnit: 20.3, pricePerKg: 20300, proveedor: '', notas: '', createdAt: Date.now() },
+        { id: uid(), category: 'Filamento', tipo: 'PETG', name: 'PETG Voxelab Blanco', marca: 'Voxelab', color: '#f5f5f5', unidad: 'g', stock: 480, umbral: 200, pricePerUnit: 24, pricePerKg: 24000, proveedor: '', notas: '', createdAt: Date.now() },
       );
     }
   }
@@ -2890,8 +3300,9 @@ compute();
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
     if (name === 'dashboard') renderDashboard();
     if (name === 'proyectos') renderProyectos();
-    if (name === 'materiales') renderMateriales();
-    if (name === 'finanzas') renderFinanzas();
+    if (name === 'inventario') renderInventario();
+    if (name === 'proveedores') renderProveedores();
+    if (name === 'contabilidad') renderContabilidad();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   window.vxShowView = showView;
@@ -2903,7 +3314,7 @@ compute();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const salesThisMonth = store.sales.filter(s => new Date(s.fecha || s.createdAt).getTime() >= monthStart);
     $('statVentas').textContent = salesThisMonth.length;
-    const ingresos = salesThisMonth.reduce((sum, s) => sum + (Number(s.monto) || 0), 0);
+    const ingresos = salesThisMonth.filter(s => s.cobrado !== false).reduce((sum, s) => sum + (Number(s.monto) || 0), 0);
     $('statIngresos').textContent = fmtMoney(ingresos);
     const horas = store.projects.reduce((sum, p) => sum + (Number(p.tiempoTotal) || 0), 0);
     $('statHoras').textContent = horas.toFixed(1) + 'h';
@@ -2911,7 +3322,6 @@ compute();
     renderMiniChart('chartVentas', store.sales, 'var(--accent-magenta)');
     renderMiniChart('chartGastos', store.expenses, 'var(--accent-orange)');
 
-    // Últimos proyectos
     const recent = [...store.projects].sort((a,b) => (b.createdAt||0) - (a.createdAt||0)).slice(0, 6);
     const wrap = $('dashRecentProjects');
     if (recent.length === 0) {
@@ -2948,8 +3358,8 @@ compute();
     `;
   }
 
-  function emptyStateHTML(title, txt, emoji){
-    return `<div class="empty-state"><div class="blob">${emoji || '📦'}</div><h3>${esc(title)}</h3><p>${esc(txt)}</p></div>`;
+  function emptyStateHTML(title, txt, emoji, compact){
+    return `<div class="empty-state${compact ? ' compact' : ''}"><div class="blob">${emoji || '📦'}</div><h3>${esc(title)}</h3><p>${esc(txt)}</p></div>`;
   }
 
   function projectCardHTML(p){
@@ -2984,32 +3394,26 @@ compute();
     else store.projects.push(proj);
     saveLocal();
     if (window.cloudSync && window.cloudSync.isLoggedIn()) {
-      try { await window.cloudSync.saveDoc('projects', proj.id, proj); } catch(e){ console.error(e); }
+      try { await window.cloudSync.saveDoc('projects', proj.id, proj); } catch(e){}
     }
   }
   async function deleteProject(id){
     if (!confirm('¿Eliminar este proyecto?')) return;
     store.projects = store.projects.filter(p => p.id !== id);
     saveLocal();
-    if (window.cloudSync && window.cloudSync.isLoggedIn()) {
-      try { await window.cloudSync.deleteDoc('projects', id); } catch(e){}
-    }
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { window.cloudSync.deleteDoc('projects', id).catch(()=>{}); }
     toast('Proyecto eliminado');
-    renderProyectos();
-    renderDashboard();
+    renderProyectos(); renderDashboard();
   }
   function loadProject(id){
     const p = store.projects.find(x => x.id === id);
     if (!p || !p.snapshot) { toast('Proyecto sin datos'); return; }
-    if (typeof window.appRestoreSnapshot === 'function') {
-      window.appRestoreSnapshot(p.snapshot);
-    }
+    if (typeof window.appRestoreSnapshot === 'function') window.appRestoreSnapshot(p.snapshot);
     window.vxCurrentProjectId = id;
     $('calcTitle').textContent = p.nombre || 'Proyecto';
     showView('calc');
     toast('Proyecto cargado ✓');
   }
-  window.vxLoadProject = loadProject;
 
   function renderProyectos(){
     const q = ($('proyectosSearch').value || '').toLowerCase();
@@ -3042,14 +3446,13 @@ compute();
     const id = window.vxCurrentProjectId || uid();
     const existing = store.projects.find(p => p.id === id);
     const proj = {
-      id,
-      nombre,
-      cliente,
+      id, nombre, cliente,
       moneda: window.appState ? window.appState.currency : 'ARS',
       precioFinal: L.precioFinal || 0,
       precioTotalPedido: L.precioTotalPedido || 0,
       tiempoTotal: L.tiempoTotalPedido || L.tiempoTotalHoras || 0,
       cantidad: L.cantidad || 1,
+      totalCostos: L.totalCostos || 0,
       estado: existing ? existing.estado : 'borrador',
       snapshot: snap,
       createdAt: existing ? existing.createdAt : Date.now(),
@@ -3060,247 +3463,579 @@ compute();
     toast('Proyecto guardado ✓');
     renderDashboard();
   };
-
   $('btnLimpiarCalc').onclick = () => {
     if (!confirm('¿Limpiar todos los campos de la calculadora?')) return;
     window.vxCurrentProjectId = null;
     $('calcTitle').textContent = 'Nuevo proyecto';
-    // Reset minimal fields
     ['clienteNombre','clienteDescripcion','disenioMonto','disenioHoras','posprocesadoMonto','posprocesadoHoras','packagingMonto','packagingHoras']
       .forEach(id => { const el = $(id); if (el) el.value = el.type === 'number' ? '0' : ''; });
     if (typeof window.appCompute === 'function') window.appCompute();
     toast('Calculadora limpia');
   };
 
-  /* ================= Materials & Printers CRUD ================= */
-  function renderMateriales(){
-    const tb = document.querySelector('#tblMateriales tbody');
-    if (store.materials.length === 0) {
-      tb.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-faint);">Sin materiales cargados.</td></tr>`;
-    } else {
-      tb.innerHTML = store.materials.map(m => `<tr data-id="${esc(m.id)}">
-        <td>${esc(m.name)}</td>
-        <td><span class="badge badge-draft">${esc(m.type || 'Filamento')}</span></td>
-        <td class="num" style="text-align:right;">${fmtMoney(m.pricePerKg)}</td>
-        <td style="text-align:right; white-space:nowrap;">
-          <button class="icon-btn" data-mat-edit="${esc(m.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-mat-del="${esc(m.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-        </td>
-      </tr>`).join('');
-      tb.querySelectorAll('[data-mat-edit]').forEach(b => b.onclick = e => editMaterial(e.currentTarget.dataset.matEdit));
-      tb.querySelectorAll('[data-mat-del]').forEach(b => b.onclick = e => deleteMaterial(e.currentTarget.dataset.matDel));
-    }
-
-    const tp = document.querySelector('#tblImpresoras tbody');
-    if (store.printers.length === 0) {
-      tp.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-faint);">Sin impresoras cargadas.</td></tr>`;
-    } else {
-      tp.innerHTML = store.printers.map(p => `<tr data-id="${esc(p.id)}">
-        <td>${esc(p.name)}</td>
-        <td class="num">${p.wattage || 0} W</td>
-        <td class="num" style="text-align:right;">${fmtMoney(p.amortPerHour || 0)}</td>
-        <td style="text-align:right; white-space:nowrap;">
-          <button class="icon-btn" data-prn-edit="${esc(p.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-prn-del="${esc(p.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-        </td>
-      </tr>`).join('');
-      tp.querySelectorAll('[data-prn-edit]').forEach(b => b.onclick = e => editPrinter(e.currentTarget.dataset.prnEdit));
-      tp.querySelectorAll('[data-prn-del]').forEach(b => b.onclick = e => deletePrinter(e.currentTarget.dataset.prnDel));
-    }
-  }
-
-  function openModal(html){
-    $('modalBody').innerHTML = html;
+  /* ================= Modal ================= */
+  function openModal(html, wide){
+    const m = $('modalBody');
+    m.className = 'modal' + (wide ? ' wide' : '');
+    m.innerHTML = html;
     $('modalBackdrop').classList.add('open');
   }
   function closeModal(){ $('modalBackdrop').classList.remove('open'); }
   $('modalBackdrop').addEventListener('click', e => { if (e.target === $('modalBackdrop')) closeModal(); });
+  document.addEventListener('click', e => { if (e.target.matches('[data-close]')) closeModal(); });
 
-  function materialForm(m){
-    m = m || { id: '', name: '', type: 'Filamento', pricePerKg: 20000 };
-    return `<h3>${m.id ? 'Editar' : 'Nuevo'} material</h3>
-      <div class="field"><label>Nombre</label><input class="input" id="mfName" value="${esc(m.name)}" placeholder="Ej: PLA Voxelab Negro"></div>
-      <div class="field"><label>Tipo</label>
-        <select id="mfType">
-          <option ${m.type==='Filamento'?'selected':''}>Filamento</option>
-          <option ${m.type==='Resina'?'selected':''}>Resina</option>
-          <option ${m.type==='Otro'?'selected':''}>Otro</option>
-        </select>
+  /* ================= INVENTARIO ================= */
+  let invTab = 'materiales'; // materiales | productos | postprocesado | impresoras
+  let invFilter = 'all';
+
+  function renderInventario(){
+    // Stat tiles
+    const filActivos = store.inventory.filter(x => x.category === 'Filamento').length;
+    const resActivos = store.inventory.filter(x => x.category === 'Resina').length;
+    const totalItems = invTab === 'impresoras' ? store.printers.length : store.inventory.filter(x => tabMatches(x)).length;
+    const stockBajo = store.inventory.filter(x => tabMatches(x) && (x.stock || 0) <= (x.umbral || 0)).length;
+    $('invStatTotal').textContent = totalItems;
+    $('invStatBajo').textContent = stockBajo;
+    $('invStatFil').textContent = filActivos;
+    $('invStatRes').textContent = resActivos;
+
+    const body = $('invBody');
+    if (invTab === 'impresoras') {
+      const items = store.printers;
+      if (items.length === 0) {
+        body.innerHTML = emptyStateHTML('Sin impresoras', 'Agregá tu primera impresora para usarla en la calculadora.', '🖨️', true);
+        return;
+      }
+      body.innerHTML = items.map(p => `
+        <div class="inv-row" data-prn="${esc(p.id)}">
+          <div class="inv-swatch" style="background:var(--surface-3); display:flex; align-items:center; justify-content:center; font-size:16px;">🖨️</div>
+          <div class="inv-name"><b>${esc(p.name)}</b><span>${p.wattage || 0}W · amort. ${fmtMoney(p.amortPerHour || 0)}/h</span></div>
+          <span class="inv-tag">IMPRESORA</span>
+          <span class="inv-stock">${p.wattage || 0} W</span>
+          <span class="inv-price">${fmtMoney(p.amortPerHour || 0)}/h</span>
+          <div class="inv-actions">
+            <button class="icon-btn" data-prn-edit="${esc(p.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="icon-btn danger" data-prn-del="${esc(p.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </div>
+        </div>
+      `).join('');
+      body.querySelectorAll('[data-prn-edit]').forEach(b => b.onclick = e => editPrinter(e.currentTarget.dataset.prnEdit));
+      body.querySelectorAll('[data-prn-del]').forEach(b => b.onclick = e => deletePrinter(e.currentTarget.dataset.prnDel));
+      return;
+    }
+
+    const q = ($('invSearch').value || '').toLowerCase();
+    const items = store.inventory.filter(x => tabMatches(x) && (invFilter === 'all' || x.category === invFilter))
+      .filter(x => !q || (x.name || '').toLowerCase().includes(q) || (x.marca || '').toLowerCase().includes(q) || (x.tipo || '').toLowerCase().includes(q));
+
+    if (items.length === 0) {
+      body.innerHTML = emptyStateHTML(
+        store.inventory.filter(tabMatches).length === 0 ? `Sin ${invTab} en inventario` : 'Sin resultados',
+        store.inventory.filter(tabMatches).length === 0 ? 'Presioná "+ Agregar" para cargar el primer item.' : 'Probá con otros filtros o términos.',
+        invTab === 'materiales' ? '🎯' : invTab === 'productos' ? '📦' : '🧴',
+        true
+      );
+      return;
+    }
+    body.innerHTML = items.map(m => {
+      const low = (m.stock || 0) <= (m.umbral || 0);
+      return `<div class="inv-row" data-inv="${esc(m.id)}">
+        <div class="inv-swatch" style="background:${esc(m.color || '#666')};"></div>
+        <div class="inv-name">
+          <b>${esc(m.name)}</b>
+          <span>${esc(m.marca || 'Sin marca')} · ${esc(m.tipo || m.category)}</span>
+        </div>
+        <span class="inv-tag">${esc((m.category || '').toUpperCase())}</span>
+        <span class="inv-stock ${low ? 'low' : ''}">${(m.stock || 0).toLocaleString('es-AR')} ${esc(m.unidad || 'g')}</span>
+        <span class="inv-price">${fmtMoney(m.pricePerKg || (m.pricePerUnit || 0) * 1000)}/kg</span>
+        <div class="inv-actions">
+          <button class="icon-btn" data-inv-edit="${esc(m.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-btn danger" data-inv-del="${esc(m.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+        </div>
+      </div>`;
+    }).join('');
+    body.querySelectorAll('[data-inv-edit]').forEach(b => b.onclick = e => editInventoryItem(e.currentTarget.dataset.invEdit));
+    body.querySelectorAll('[data-inv-del]').forEach(b => b.onclick = e => deleteInventoryItem(e.currentTarget.dataset.invDel));
+  }
+  function tabMatches(x){
+    if (invTab === 'materiales') return x.category === 'Filamento' || x.category === 'Resina';
+    if (invTab === 'productos') return x.category === 'Producto';
+    if (invTab === 'postprocesado') return x.category === 'Postprocesado' || x.category === 'Otro';
+    return false;
+  }
+
+  // Tab switching
+  $('invTabs').addEventListener('click', e => {
+    const b = e.target.closest('.tab-btn');
+    if (!b) return;
+    document.querySelectorAll('#invTabs .tab-btn').forEach(x => x.classList.toggle('active', x === b));
+    invTab = b.dataset.tab;
+    // Show filter chips only for materiales tab
+    $('invChips').style.display = invTab === 'materiales' ? '' : 'none';
+    renderInventario();
+  });
+  $('invSearch').addEventListener('input', renderInventario);
+  $('invChips').addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    document.querySelectorAll('#invChips .chip').forEach(x => x.classList.toggle('active', x === c));
+    invFilter = c.dataset.filter;
+    renderInventario();
+  });
+
+  function inventoryForm(item){
+    item = item || { id: '', category: 'Filamento', tipo: 'PLA', name: '', marca: '', color: '#FF0000', unidad: 'g', stock: 1000, umbral: 100, pricePerKg: 20000, proveedor: '', notas: '' };
+    const provOptions = ['<option value="">Sin proveedor</option>'].concat(
+      store.providers.map(p => `<option value="${esc(p.id)}" ${item.proveedor === p.id ? 'selected' : ''}>${esc(p.name)}</option>`)
+    ).join('');
+    return `<h3>${item.id ? 'Editar' : 'Agregar'} material</h3>
+      <div class="field"><label>Categoría</label>
+        <div class="seg-pick">
+          <button data-cat="Filamento" class="${item.category==='Filamento'?'on':''}">Filamento</button>
+          <button data-cat="Resina" class="${item.category==='Resina'?'on':''}">Resina</button>
+          <button data-cat="Producto" class="${item.category==='Producto'?'on':''}">Producto</button>
+          <button data-cat="Postprocesado" class="${item.category==='Postprocesado'?'on':''}">Postproc.</button>
+        </div>
       </div>
-      <div class="field"><label>Precio por kg</label><input class="input num" type="number" step="0.01" id="mfPrice" value="${Number(m.pricePerKg)||0}"></div>
+      <div class="field"><label>Nombre *</label><input class="input" id="ifName" value="${esc(item.name)}" placeholder="Ej: PLA Winkle Rojo"></div>
+      <div class="field-row">
+        <div class="field"><label>Tipo</label>
+          <select class="input" id="ifTipo">
+            ${['PLA','PLA+','PETG','ABS','ASA','TPU','Nylon','Resina Std','Resina ABS','Otro'].map(t => `<option ${item.tipo===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Unidad</label>
+          <select class="input" id="ifUnidad">
+            ${['g','kg','ml','L','unidades'].map(u => `<option ${item.unidad===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Marca</label><input class="input" id="ifMarca" value="${esc(item.marca)}" placeholder="Ej: Winkle"></div>
+        <div class="field"><label>Color</label>
+          <div class="color-pick">
+            <input type="color" id="ifColor" value="${esc(item.color || '#666666')}">
+            <input class="input" id="ifColorHex" value="${esc(item.color || '#666666')}" style="flex:1;">
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Cantidad inicial *</label><input class="input num" type="number" step="1" id="ifStock" value="${Number(item.stock)||0}"></div>
+        <div class="field"><label>Precio por kg</label><input class="input num" type="number" step="0.01" id="ifPrice" value="${Number(item.pricePerKg)||0}"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Umbral stock bajo</label><input class="input num" type="number" step="1" id="ifUmbral" value="${Number(item.umbral)||0}"></div>
+        <div class="field"><label>Proveedor</label><select class="input" id="ifProv">${provOptions}</select></div>
+      </div>
+      <div class="field"><label>Notas</label><textarea class="input" id="ifNotas" rows="2" placeholder="Notas adicionales…">${esc(item.notas || '')}</textarea></div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
-        <button class="btn primary" id="mfSave" data-id="${esc(m.id)}">${m.id ? 'Guardar cambios' : 'Añadir'}</button>
+        <button class="btn primary" id="ifSave" data-id="${esc(item.id)}">${item.id ? 'Guardar cambios' : 'Agregar'}</button>
       </div>`;
   }
-  function printerForm(p){
+  function wireInventoryForm(existing){
+    // Category picker
+    document.querySelectorAll('.seg-pick button[data-cat]').forEach(b => b.onclick = ev => {
+      document.querySelectorAll('.seg-pick button[data-cat]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      b.dataset._selected = '1';
+    });
+    // Color sync
+    const ic = $('ifColor'), ih = $('ifColorHex');
+    ic.oninput = () => ih.value = ic.value;
+    ih.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ih.value)) ic.value = ih.value; };
+
+    $('ifSave').onclick = async () => {
+      const cat = document.querySelector('.seg-pick button[data-cat].on');
+      const category = cat ? cat.dataset.cat : 'Filamento';
+      const id = existing ? existing.id : uid();
+      const pricePerKg = parseFloat($('ifPrice').value) || 0;
+      const data = {
+        id, category,
+        tipo: $('ifTipo').value,
+        name: $('ifName').value.trim() || 'Sin nombre',
+        marca: $('ifMarca').value.trim(),
+        color: $('ifColorHex').value,
+        unidad: $('ifUnidad').value,
+        stock: parseFloat($('ifStock').value) || 0,
+        umbral: parseFloat($('ifUmbral').value) || 0,
+        pricePerKg,
+        pricePerUnit: pricePerKg / 1000,
+        proveedor: $('ifProv').value,
+        notas: $('ifNotas').value.trim(),
+        createdAt: existing ? existing.createdAt : Date.now(),
+      };
+      const idx = store.inventory.findIndex(x => x.id === id);
+      if (idx > -1) store.inventory[idx] = data; else store.inventory.push(data);
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('inventory', id, data); } catch(e){} }
+      closeModal(); renderInventario(); toast(existing ? 'Item actualizado ✓' : 'Item agregado ✓');
+    };
+  }
+  function editInventoryItem(id){
+    const it = store.inventory.find(x => x.id === id);
+    if (!it) return;
+    openModal(inventoryForm(it), true);
+    wireInventoryForm(it);
+  }
+  async function deleteInventoryItem(id){
+    if (!confirm('¿Eliminar este item del inventario?')) return;
+    store.inventory = store.inventory.filter(x => x.id !== id);
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc('inventory', id).catch(()=>{});
+    renderInventario(); toast('Item eliminado');
+  }
+  $('btnInvAdd').onclick = () => {
+    if (invTab === 'impresoras') { openPrinterModal(); return; }
+    const preset = { id: '', category: invTab === 'materiales' ? 'Filamento' : invTab === 'productos' ? 'Producto' : 'Postprocesado' };
+    openModal(inventoryForm(preset), true);
+    wireInventoryForm(null);
+  };
+
+  // Printers modal (unchanged behavior)
+  function printerFormHTML(p){
     p = p || { id: '', name: '', wattage: 100, amortPerHour: 150 };
     return `<h3>${p.id ? 'Editar' : 'Nueva'} impresora</h3>
       <div class="field"><label>Nombre</label><input class="input" id="pfName" value="${esc(p.name)}" placeholder="Ej: Ender 3 V2"></div>
-      <div class="field"><label>Consumo (W)</label><input class="input num" type="number" step="1" id="pfW" value="${Number(p.wattage)||0}"></div>
-      <div class="field"><label>Amortización por hora ($)</label><input class="input num" type="number" step="1" id="pfAmort" value="${Number(p.amortPerHour)||0}"></div>
+      <div class="field-row">
+        <div class="field"><label>Consumo (W)</label><input class="input num" type="number" step="1" id="pfW" value="${Number(p.wattage)||0}"></div>
+        <div class="field"><label>Amortización por hora ($)</label><input class="input num" type="number" step="1" id="pfAmort" value="${Number(p.amortPerHour)||0}"></div>
+      </div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
         <button class="btn primary" id="pfSave" data-id="${esc(p.id)}">${p.id ? 'Guardar cambios' : 'Añadir'}</button>
       </div>`;
   }
-  document.addEventListener('click', e => { if (e.target.matches('[data-close]')) closeModal(); });
-
-  function editMaterial(id){
-    const m = store.materials.find(x => x.id === id);
-    openModal(materialForm(m));
-    $('mfSave').onclick = async () => {
-      const data = {
-        id: id,
-        name: $('mfName').value.trim() || 'Sin nombre',
-        type: $('mfType').value,
-        pricePerKg: parseFloat($('mfPrice').value) || 0,
-        createdAt: m ? m.createdAt : Date.now(),
-      };
-      const idx = store.materials.findIndex(x => x.id === id);
-      if (idx > -1) store.materials[idx] = data;
-      saveLocal();
-      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('materials', id, data); } catch(e){} }
-      closeModal(); renderMateriales(); toast('Material guardado ✓');
-    };
-  }
-  function deleteMaterial(id){
-    if (!confirm('¿Eliminar material?')) return;
-    store.materials = store.materials.filter(x => x.id !== id);
-    saveLocal();
-    if (window.cloudSync && window.cloudSync.isLoggedIn()) { window.cloudSync.deleteDoc('materials', id).catch(()=>{}); }
-    renderMateriales(); toast('Material eliminado');
-  }
-  $('btnAddMaterial').onclick = () => {
-    openModal(materialForm());
-    $('mfSave').onclick = async () => {
-      const data = {
-        id: uid(),
-        name: $('mfName').value.trim() || 'Sin nombre',
-        type: $('mfType').value,
-        pricePerKg: parseFloat($('mfPrice').value) || 0,
-        createdAt: Date.now(),
-      };
-      store.materials.push(data);
-      saveLocal();
-      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('materials', data.id, data); } catch(e){} }
-      closeModal(); renderMateriales(); toast('Material añadido ✓');
-    };
-  };
-  function editPrinter(id){
-    const p = store.printers.find(x => x.id === id);
-    openModal(printerForm(p));
+  function openPrinterModal(existing){
+    openModal(printerFormHTML(existing));
     $('pfSave').onclick = async () => {
+      const id = existing ? existing.id : uid();
       const data = {
         id, name: $('pfName').value.trim() || 'Sin nombre',
         wattage: parseFloat($('pfW').value) || 0,
         amortPerHour: parseFloat($('pfAmort').value) || 0,
-        createdAt: p ? p.createdAt : Date.now(),
+        createdAt: existing ? existing.createdAt : Date.now(),
       };
       const idx = store.printers.findIndex(x => x.id === id);
-      if (idx > -1) store.printers[idx] = data;
+      if (idx > -1) store.printers[idx] = data; else store.printers.push(data);
       saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('printers', id, data); } catch(e){} }
-      closeModal(); renderMateriales(); toast('Impresora guardada ✓');
+      closeModal(); renderInventario(); toast('Impresora guardada ✓');
     };
   }
-  function deletePrinter(id){
+  function editPrinter(id){ const p = store.printers.find(x => x.id === id); if (p) openPrinterModal(p); }
+  async function deletePrinter(id){
     if (!confirm('¿Eliminar impresora?')) return;
     store.printers = store.printers.filter(x => x.id !== id);
     saveLocal();
-    if (window.cloudSync && window.cloudSync.isLoggedIn()) { window.cloudSync.deleteDoc('printers', id).catch(()=>{}); }
-    renderMateriales(); toast('Impresora eliminada');
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc('printers', id).catch(()=>{});
+    renderInventario(); toast('Impresora eliminada');
   }
-  $('btnAddImpresora').onclick = () => {
-    openModal(printerForm());
-    $('pfSave').onclick = async () => {
-      const data = {
-        id: uid(),
-        name: $('pfName').value.trim() || 'Sin nombre',
-        wattage: parseFloat($('pfW').value) || 0,
-        amortPerHour: parseFloat($('pfAmort').value) || 0,
-        createdAt: Date.now(),
-      };
-      store.printers.push(data);
-      saveLocal();
-      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('printers', data.id, data); } catch(e){} }
-      closeModal(); renderMateriales(); toast('Impresora añadida ✓');
-    };
-  };
 
-  /* ================= Finanzas ================= */
-  function renderFinanzas(){
-    const ingresos = store.sales.reduce((s, v) => s + (Number(v.monto) || 0), 0);
-    const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto) || 0), 0);
-    $('finIngresos').textContent = fmtMoney(ingresos);
-    $('finGastos').textContent = fmtMoney(gastos);
-    $('finBalance').textContent = fmtMoney(ingresos - gastos);
-
-    const tv = document.querySelector('#tblVentas tbody');
-    const sales = [...store.sales].sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
-    if (sales.length === 0) {
-      tv.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-faint);">Sin ventas registradas.</td></tr>`;
-    } else {
-      tv.innerHTML = sales.map(v => `<tr>
-        <td class="num">${esc(v.fecha || todayISO())}</td>
-        <td>${esc(v.descripcion || '')}</td>
-        <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
-        <td style="text-align:right;"><button class="icon-btn danger" data-sale-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
-      </tr>`).join('');
-      tv.querySelectorAll('[data-sale-del]').forEach(b => b.onclick = e => deleteFin('sales', e.currentTarget.dataset.saleDel));
+  /* ================= PROVEEDORES ================= */
+  function renderProveedores(){
+    const body = $('provBody');
+    if (store.providers.length === 0) {
+      body.innerHTML = emptyStateHTML('Todavía no tenés proveedores', 'Añadí los proveedores que usás habitualmente para vincularlos a tus materiales.', '🚚');
+      return;
     }
-    const tg = document.querySelector('#tblGastos tbody');
-    const exps = [...store.expenses].sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
-    if (exps.length === 0) {
-      tg.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:22px; color:var(--text-faint);">Sin gastos registrados.</td></tr>`;
-    } else {
-      tg.innerHTML = exps.map(v => `<tr>
-        <td class="num">${esc(v.fecha || todayISO())}</td>
-        <td>${esc(v.descripcion || '')}</td>
-        <td class="num" style="text-align:right; color:#fca5a5;">${fmtMoney(v.monto)}</td>
-        <td style="text-align:right;"><button class="icon-btn danger" data-exp-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
-      </tr>`).join('');
-      tg.querySelectorAll('[data-exp-del]').forEach(b => b.onclick = e => deleteFin('expenses', e.currentTarget.dataset.expDel));
-    }
+    body.innerHTML = '<div class="prov-grid">' + store.providers.map(p => {
+      const initials = (p.name || '?').split(' ').map(x => x[0]).join('').slice(0,2).toUpperCase();
+      return `<div class="prov-card" data-id="${esc(p.id)}">
+        <div class="prov-head">
+          <div class="prov-avatar">${esc(initials)}</div>
+          <h4>${esc(p.name)}</h4>
+          <button class="icon-btn danger" data-prov-del="${esc(p.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+        </div>
+        ${p.web ? `<a class="prov-link" href="${esc(p.web)}" target="_blank" rel="noopener"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>${esc(p.web.replace(/^https?:\/\//,''))}</a>` : ''}
+        ${p.contacto ? `<div class="prov-meta">📞 ${esc(p.contacto)}</div>` : ''}
+        ${p.notas ? `<div class="prov-meta">${esc(p.notas)}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
+    body.querySelectorAll('[data-prov-del]').forEach(b => b.onclick = e => deleteProvider(e.currentTarget.dataset.provDel));
   }
-  function finForm(kind){
-    const label = kind === 'sales' ? 'venta' : 'gasto';
-    return `<h3>Nueva ${label}</h3>
-      <div class="field"><label>Fecha</label><input class="input" type="date" id="ffFecha" value="${todayISO()}"></div>
-      <div class="field"><label>Descripción</label><input class="input" id="ffDesc" placeholder="Ej: Pedido llaveros — Juan"></div>
-      <div class="field"><label>Monto</label><input class="input num" type="number" step="0.01" id="ffMonto" value="0"></div>
+  function providerFormHTML(p){
+    p = p || { id: '', name: '', web: '', contacto: '', notas: '' };
+    return `<h3>${p.id ? 'Editar' : 'Añadir'} proveedor</h3>
+      <div class="field"><label>Nombre *</label><input class="input" id="pvName" value="${esc(p.name)}" placeholder="Ej: Grilon3"></div>
+      <div class="field"><label>Sitio web</label><input class="input" id="pvWeb" value="${esc(p.web)}" placeholder="https://…"></div>
+      <div class="field"><label>Contacto (email o tel)</label><input class="input" id="pvContact" value="${esc(p.contacto)}" placeholder="ventas@ejemplo.com"></div>
+      <div class="field"><label>Notas</label><textarea class="input" id="pvNotas" rows="2">${esc(p.notas || '')}</textarea></div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
-        <button class="btn primary" id="ffSave">Añadir ${label}</button>
+        <button class="btn primary" id="pvSave">${p.id ? 'Guardar cambios' : 'Añadir'}</button>
       </div>`;
   }
-  async function addFin(kind){
-    openModal(finForm(kind));
-    $('ffSave').onclick = async () => {
-      const data = {
-        id: uid(),
-        fecha: $('ffFecha').value || todayISO(),
-        descripcion: $('ffDesc').value || '',
-        monto: parseFloat($('ffMonto').value) || 0,
-        createdAt: Date.now(),
-      };
-      store[kind].push(data);
-      saveLocal();
-      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc(kind, data.id, data); } catch(e){} }
-      closeModal(); renderFinanzas(); renderDashboard();
-      toast((kind === 'sales' ? 'Venta' : 'Gasto') + ' añadido ✓');
+  async function saveProvider(existing){
+    const id = existing ? existing.id : uid();
+    const data = {
+      id,
+      name: $('pvName').value.trim() || 'Sin nombre',
+      web: $('pvWeb').value.trim(),
+      contacto: $('pvContact').value.trim(),
+      notas: $('pvNotas').value.trim(),
+      createdAt: existing ? existing.createdAt : Date.now(),
     };
+    const idx = store.providers.findIndex(x => x.id === id);
+    if (idx > -1) store.providers[idx] = data; else store.providers.push(data);
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('providers', id, data); } catch(e){} }
+    closeModal(); renderProveedores(); toast('Proveedor guardado ✓');
   }
+  async function deleteProvider(id){
+    if (!confirm('¿Eliminar proveedor?')) return;
+    store.providers = store.providers.filter(x => x.id !== id);
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc('providers', id).catch(()=>{});
+    renderProveedores(); toast('Proveedor eliminado');
+  }
+  $('btnProvAdd').onclick = () => {
+    openModal(providerFormHTML());
+    $('pvSave').onclick = () => saveProvider(null);
+  };
+
+  /* ================= CONTABILIDAD ================= */
+  let cntTab = 'inicio';
+
+  function renderContabilidad(){
+    const cobrado = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + (Number(v.monto)||0), 0);
+    const pendiente = store.sales.filter(s => s.cobrado === false).reduce((s, v) => s + (Number(v.monto)||0), 0);
+    const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto)||0), 0);
+    const saldoInicial = Number(store.settings.saldoInicial) || 0;
+    const beneficio = saldoInicial + cobrado - gastos;
+    // Margen promedio: sobre ventas cobradas, usando totalCostos de proyectos vinculados si existen, sino asumir cost=0
+    let totMargen = 0, cnt = 0;
+    store.sales.forEach(s => {
+      if (s.cobrado === false) return;
+      const proj = s.proyectoId ? store.projects.find(p => p.id === s.proyectoId) : null;
+      const cost = proj ? (proj.totalCostos * (proj.cantidad || 1)) : 0;
+      const monto = Number(s.monto) || 0;
+      if (monto > 0) { totMargen += (monto - cost) / monto; cnt++; }
+    });
+    const margenProm = cnt > 0 ? (totMargen / cnt) * 100 : 0;
+    // $/hora: cobrado / horas totales de proyectos vendidos
+    const horasVendidas = store.projects.filter(p => p.estado === 'vendido').reduce((s, p) => s + (Number(p.tiempoTotal) || 0), 0);
+    const porHora = horasVendidas > 0 ? cobrado / horasVendidas : 0;
+
+    $('kpiCobrado').textContent = fmtMoney(cobrado);
+    $('kpiPendiente').textContent = fmtMoney(pendiente);
+    $('kpiBeneficio').textContent = fmtMoney(beneficio);
+    $('kpiMargen').textContent = margenProm.toFixed(1) + '%';
+    $('kpiPorHora').textContent = fmtMoney(porHora);
+    $('kpiSaldo').textContent = fmtMoney(saldoInicial);
+
+    renderContabilidadTab();
+  }
+
+  function renderContabilidadTab(){
+    const body = $('cntTabBody');
+    if (cntTab === 'inicio') {
+      // Salud fiscal + pendientes
+      const gastosSinJust = store.expenses.filter(g => !g.justificante).length;
+      const presPendientes = store.presupuestos.filter(p => p.estado === 'pendiente').length;
+      const ventasSinCobrar = store.sales.filter(s => s.cobrado === false).length;
+      body.innerHTML = `
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:16px 0 8px; font-weight:600;">Salud fiscal</div>
+        ${gastosSinJust > 0 ? `
+          <div class="alert-row">
+            <span class="ic">⚠</span>
+            <span class="msg">Gastos sin justificante (no deducibles ante Hacienda)</span>
+            <span class="count">${gastosSinJust}</span>
+          </div>` : `
+          <div class="alert-row ok">
+            <span class="ic ok">✓</span>
+            <span class="msg">Todos los gastos tienen justificante</span>
+          </div>`}
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:20px 0 8px; font-weight:600;">Pendientes</div>
+        <div class="two-col">
+          <div class="card"><h2 style="margin:0 0 12px; font-size:14.5px;">📄 Presupuestos</h2>
+            ${presPendientes === 0
+              ? '<div style="color:#6ee7a7; font-size:13px;">✓ Sin presupuestos pendientes</div>'
+              : `<div style="font-size:13px;">${presPendientes} presupuesto${presPendientes>1?'s':''} esperando respuesta.</div>`}
+          </div>
+          <div class="card"><h2 style="margin:0 0 12px; font-size:14.5px;">💰 Ventas sin cobrar</h2>
+            ${ventasSinCobrar === 0
+              ? '<div style="color:#6ee7a7; font-size:13px;">✓ Todas las ventas cobradas</div>'
+              : `<div style="font-size:13px;">${ventasSinCobrar} venta${ventasSinCobrar>1?'s':''} pendiente${ventasSinCobrar>1?'s':''} de cobro.</div>`}
+          </div>
+        </div>`;
+      return;
+    }
+    if (cntTab === 'ventas') {
+      const sales = [...store.sales].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      if (sales.length === 0) { body.innerHTML = emptyStateHTML('Sin ventas', 'Presioná "Crear venta" para registrar la primera.', '💰', true); return; }
+      body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Estado</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <tbody>${sales.map(v => `<tr>
+          <td class="num">${esc(v.fecha || todayISO())}</td>
+          <td>${esc(v.descripcion || '')}</td>
+          <td>${v.cobrado === false ? '<span class="badge badge-draft">Pendiente</span>' : '<span class="badge badge-sold">Cobrado</span>'}</td>
+          <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            ${v.cobrado === false ? `<button class="btn small" data-sale-cobrar="${esc(v.id)}">Marcar cobrada</button>` : ''}
+            <button class="icon-btn danger" data-sale-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </td>
+        </tr>`).join('')}</tbody></table></div>`;
+      body.querySelectorAll('[data-sale-del]').forEach(b => b.onclick = e => deleteFin('sales', e.currentTarget.dataset.saleDel));
+      body.querySelectorAll('[data-sale-cobrar]').forEach(b => b.onclick = async e => {
+        const id = e.currentTarget.dataset.saleCobrar;
+        const s = store.sales.find(x => x.id === id); if (!s) return;
+        s.cobrado = true;
+        saveLocal();
+        if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', s.id, s); } catch(e){} }
+        renderContabilidad(); renderDashboard(); toast('Marcada cobrada ✓');
+      });
+      return;
+    }
+    if (cntTab === 'gastos') {
+      const exps = [...store.expenses].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      if (exps.length === 0) { body.innerHTML = emptyStateHTML('Sin gastos', 'Presioná "Registrar gasto" para cargar el primero.', '🧾', true); return; }
+      body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Just.</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <tbody>${exps.map(v => `<tr>
+          <td class="num">${esc(v.fecha || todayISO())}</td>
+          <td>${esc(v.descripcion || '')}</td>
+          <td>${esc(v.categoria || 'Otros')}</td>
+          <td>${v.justificante ? '<span style="color:#6ee7a7;">✓</span>' : '<span style="color:var(--accent-yellow);">–</span>'}</td>
+          <td class="num" style="text-align:right; color:#fca5a5;">${fmtMoney(v.monto)}</td>
+          <td style="text-align:right;"><button class="icon-btn danger" data-exp-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
+        </tr>`).join('')}</tbody></table></div>`;
+      body.querySelectorAll('[data-exp-del]').forEach(b => b.onclick = e => deleteFin('expenses', e.currentTarget.dataset.expDel));
+      return;
+    }
+    if (cntTab === 'presupuestos') {
+      const items = [...store.presupuestos].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      if (items.length === 0) { body.innerHTML = emptyStateHTML('Sin presupuestos', 'Presioná "Nuevo presupuesto" para crear uno.', '📄', true); return; }
+      body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Descripción</th><th>Estado</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <tbody>${items.map(v => `<tr>
+          <td class="num">${esc(v.fecha)}</td>
+          <td>${esc(v.cliente || '')}</td>
+          <td>${esc(v.descripcion || '')}</td>
+          <td>${v.estado === 'aceptado' ? '<span class="badge badge-sold">Aceptado</span>' : v.estado === 'rechazado' ? '<span class="badge badge-draft">Rechazado</span>' : '<span class="badge" style="background:rgba(255,214,10,.15); color:var(--accent-yellow);">Pendiente</span>'}</td>
+          <td class="num" style="text-align:right;">${fmtMoney(v.monto)}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            ${v.estado === 'pendiente' ? `<button class="btn small" data-pres-acc="${esc(v.id)}">✓</button><button class="btn small" data-pres-rej="${esc(v.id)}">✗</button>` : ''}
+            <button class="icon-btn danger" data-pres-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </td>
+        </tr>`).join('')}</tbody></table></div>`;
+      body.querySelectorAll('[data-pres-acc]').forEach(b => b.onclick = e => updatePresupuestoEstado(e.currentTarget.dataset.presAcc, 'aceptado'));
+      body.querySelectorAll('[data-pres-rej]').forEach(b => b.onclick = e => updatePresupuestoEstado(e.currentTarget.dataset.presRej, 'rechazado'));
+      body.querySelectorAll('[data-pres-del]').forEach(b => b.onclick = e => deletePresupuesto(e.currentTarget.dataset.presDel));
+    }
+  }
+  $('cntTabs').addEventListener('click', e => {
+    const b = e.target.closest('.tab-btn'); if (!b) return;
+    document.querySelectorAll('#cntTabs .tab-btn').forEach(x => x.classList.toggle('active', x === b));
+    cntTab = b.dataset.tab;
+    renderContabilidadTab();
+  });
+
+  // Modals contabilidad
+  function ventaForm(){
+    return `<h3>Nueva venta</h3>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input class="input" type="date" id="vfFecha" value="${todayISO()}"></div>
+        <div class="field"><label>Monto *</label><input class="input num" type="number" step="0.01" id="vfMonto" value="0"></div>
+      </div>
+      <div class="field"><label>Descripción</label><input class="input" id="vfDesc" placeholder="Ej: Pedido llaveros — Juan"></div>
+      <div class="field"><label>Estado</label>
+        <div class="seg-pick">
+          <button data-st="cobrado" class="on">Cobrado</button>
+          <button data-st="pendiente">Pendiente</button>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="vfSave">Añadir venta</button></div>`;
+  }
+  function gastoForm(){
+    return `<h3>Registrar gasto</h3>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input class="input" type="date" id="gfFecha" value="${todayISO()}"></div>
+        <div class="field"><label>Monto *</label><input class="input num" type="number" step="0.01" id="gfMonto" value="0"></div>
+      </div>
+      <div class="field"><label>Descripción</label><input class="input" id="gfDesc" placeholder="Ej: Compra de PLA"></div>
+      <div class="field-row">
+        <div class="field"><label>Categoría</label>
+          <select class="input" id="gfCat">
+            ${['Materiales','Herramientas','Servicios','Publicidad','Envíos','Otros'].map(c => `<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="gfJust" style="accent-color: var(--accent-magenta);">Con justificante (factura)</label></div>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="gfSave">Registrar gasto</button></div>`;
+  }
+  function presupuestoForm(){
+    return `<h3>Nuevo presupuesto</h3>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input class="input" type="date" id="ptFecha" value="${todayISO()}"></div>
+        <div class="field"><label>Monto *</label><input class="input num" type="number" step="0.01" id="ptMonto" value="0"></div>
+      </div>
+      <div class="field"><label>Cliente</label><input class="input" id="ptCliente" placeholder="Nombre del cliente"></div>
+      <div class="field"><label>Descripción</label><input class="input" id="ptDesc" placeholder="Ej: Set de 10 llaveros"></div>
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="ptSave">Crear presupuesto</button></div>`;
+  }
+  function wireSegPick(cb){
+    document.querySelectorAll('.seg-pick button[data-st]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.seg-pick button[data-st]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    });
+  }
+  $('baVenta').onclick = () => {
+    openModal(ventaForm());
+    wireSegPick();
+    $('vfSave').onclick = async () => {
+      const st = document.querySelector('.seg-pick button[data-st].on');
+      const data = { id: uid(), fecha: $('vfFecha').value || todayISO(), descripcion: $('vfDesc').value, monto: parseFloat($('vfMonto').value) || 0, cobrado: st ? st.dataset.st === 'cobrado' : true, createdAt: Date.now() };
+      store.sales.push(data); saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', data.id, data); } catch(e){} }
+      closeModal(); renderContabilidad(); renderDashboard(); toast('Venta añadida ✓');
+    };
+  };
+  $('baGasto').onclick = () => {
+    openModal(gastoForm());
+    $('gfSave').onclick = async () => {
+      const data = { id: uid(), fecha: $('gfFecha').value || todayISO(), descripcion: $('gfDesc').value, categoria: $('gfCat').value, justificante: $('gfJust').checked, monto: parseFloat($('gfMonto').value) || 0, createdAt: Date.now() };
+      store.expenses.push(data); saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('expenses', data.id, data); } catch(e){} }
+      closeModal(); renderContabilidad(); renderDashboard(); toast('Gasto registrado ✓');
+    };
+  };
+  $('baPresupuesto').onclick = () => {
+    openModal(presupuestoForm());
+    $('ptSave').onclick = async () => {
+      const data = { id: uid(), fecha: $('ptFecha').value || todayISO(), cliente: $('ptCliente').value, descripcion: $('ptDesc').value, monto: parseFloat($('ptMonto').value) || 0, estado: 'pendiente', createdAt: Date.now() };
+      store.presupuestos.push(data); saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('presupuestos', data.id, data); } catch(e){} }
+      closeModal(); renderContabilidad(); toast('Presupuesto creado ✓');
+    };
+  };
+  $('cntSaldoInit').onclick = () => {
+    const val = prompt('Saldo inicial (ARS):', String(store.settings.saldoInicial || 0));
+    if (val == null) return;
+    const n = parseFloat(val); if (!isFinite(n)) return;
+    store.settings.saldoInicial = n; saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { window.cloudSync.saveDoc('settings', 'app', store.settings).catch(()=>{}); }
+    renderContabilidad(); toast('Saldo actualizado ✓');
+  };
   async function deleteFin(kind, id){
     if (!confirm('¿Eliminar registro?')) return;
-    store[kind] = store[kind].filter(x => x.id !== id);
-    saveLocal();
-    if (window.cloudSync && window.cloudSync.isLoggedIn()) { window.cloudSync.deleteDoc(kind, id).catch(()=>{}); }
-    renderFinanzas(); renderDashboard();
+    store[kind] = store[kind].filter(x => x.id !== id); saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc(kind, id).catch(()=>{});
+    renderContabilidad(); renderDashboard();
   }
-  $('btnAddVenta').onclick = () => addFin('sales');
-  $('btnAddGasto').onclick = () => addFin('expenses');
-  $('btnNuevaVentaHero').onclick = () => { showView('finanzas'); setTimeout(() => addFin('sales'), 100); };
+  async function updatePresupuestoEstado(id, estado){
+    const p = store.presupuestos.find(x => x.id === id); if (!p) return;
+    p.estado = estado; saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('presupuestos', id, p); } catch(e){} }
+    renderContabilidad(); toast('Presupuesto actualizado');
+  }
+  async function deletePresupuesto(id){
+    if (!confirm('¿Eliminar presupuesto?')) return;
+    store.presupuestos = store.presupuestos.filter(x => x.id !== id); saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) window.cloudSync.deleteDoc('presupuestos', id).catch(()=>{});
+    renderContabilidad();
+  }
+  $('btnNuevaVentaHero').onclick = () => { showView('contabilidad'); setTimeout(() => $('baVenta').click(), 100); };
 
   /* ================= Login gate handling ================= */
   const HIDE_GATE_KEY = 'volumetrix-skip-login';
@@ -3313,38 +4048,32 @@ compute();
     $('loginGate').style.display = '';
     $('appShell').style.display = 'none';
   }
-  if (localStorage.getItem(HIDE_GATE_KEY) === '1') {
-    showAppShell();
-  } else {
-    showLoginGate();
-  }
-  $('btnSkipLogin').onclick = () => {
-    localStorage.setItem(HIDE_GATE_KEY, '1');
-    showAppShell();
-  };
+  if (localStorage.getItem(HIDE_GATE_KEY) === '1') showAppShell(); else showLoginGate();
+  $('btnSkipLogin').onclick = () => { localStorage.setItem(HIDE_GATE_KEY, '1'); showAppShell(); };
   window.vxShowAppShell = showAppShell;
 
   /* Cloud data hydration */
   window.vxHydrateFromCloud = (col, docs) => {
-    // docs: object { id: data }
     const arr = Object.entries(docs).map(([id, d]) => ({ id, ...d }));
-    // Merge: prefer cloud entries by id; keep local ones not in cloud only if they were created before login? Simpler: replace.
-    if (arr.length > 0) store[col] = arr;
-    saveLocal();
+    if (col === 'settings' && arr.length > 0) {
+      store.settings = arr[0]; saveLocal();
+    } else if (arr.length > 0) {
+      store[col] = arr; saveLocal();
+    }
     const active = document.querySelector('.view.active');
     if (!active) return;
     if (active.id === 'view-dashboard') renderDashboard();
     if (active.id === 'view-proyectos') renderProyectos();
-    if (active.id === 'view-materiales') renderMateriales();
-    if (active.id === 'view-finanzas') renderFinanzas();
+    if (active.id === 'view-inventario') renderInventario();
+    if (active.id === 'view-proveedores') renderProveedores();
+    if (active.id === 'view-contabilidad') renderContabilidad();
   };
 
-  // Wire sidebar login buttons to the existing #btnLogin (legacy account card)
+  // Wire sidebar login buttons
   $('sideLoginBtn').onclick = () => { const b = $('btnLogin'); if (b) b.click(); };
   $('btnLoginGate').onclick = () => { const b = $('btnLogin'); if (b) b.click(); };
   $('sideLogout').onclick = () => { const b = $('btnLogout'); if (b) b.click(); };
 
-  // Hide the old account card inside calc view (login now lives in sidebar)
   const acc = $('accountCard');
   if (acc) acc.style.display = 'none';
 
@@ -3365,15 +4094,11 @@ compute();
     }
   };
 
-  // Expose snapshot/restore/compute functions from the base calc script.
-  // The base script defines snapshot/restore/compute as local; we grab them via a small shim:
   if (typeof snapshot === 'function') window.appSnapshot = snapshot;
   if (typeof restore === 'function') window.appRestoreSnapshot = restore;
   if (typeof compute === 'function') window.appCompute = compute;
-  // Also grab _last from state
   Object.defineProperty(window, 'appLast', { get: () => (window.appState && window.appState._last) || {} });
 
-  // Initial dashboard render
   renderDashboard();
 })();
 
@@ -3429,7 +4154,7 @@ if (btnLogin) btnLogin.onclick = async () => {
 const btnLogout = $('btnLogout');
 if (btnLogout) btnLogout.onclick = () => signOut(auth);
 
-const COLLECTIONS = ['projects', 'materials', 'printers', 'sales', 'expenses'];
+const COLLECTIONS = ['projects', 'inventory', 'printers', 'providers', 'sales', 'expenses', 'presupuestos', 'settings'];
 
 onAuthStateChanged(auth, async user => {
   currentUser = user;
