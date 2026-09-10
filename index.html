@@ -4397,6 +4397,11 @@ compute();
   let cntTab = 'inicio';
 
   function feeForSale(s){
+    // Si el usuario cargó una comisión real manual (ej. hay retención),
+    // se usa ese valor. Sino se calcula por el % del método.
+    if (s.comisionOverride != null && s.comisionOverride !== '' && isFinite(Number(s.comisionOverride))) {
+      return Number(s.comisionOverride);
+    }
     const met = PAY_METHODS.find(m => m.id === s.metodoPago);
     const feePct = (met && met.fee) || 0;
     return (Number(s.monto) || 0) * (feePct / 100);
@@ -4610,6 +4615,17 @@ compute();
         <input class="input" type="date" id="vfLiq" value="">
         <div class="hint" id="vfLiqHint" style="color:var(--text-faint); font-size:11.5px; margin-top:4px;"></div>
       </div>
+      <div class="field" style="margin-top:8px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px;">
+          <input type="checkbox" id="vfComisOverrideChk" style="accent-color: var(--accent-magenta);">
+          Cargar comisión real (si tiene retención u otro cargo extra)
+        </label>
+      </div>
+      <div class="field" id="vfComisOverrideWrap" style="display:none;">
+        <label>Comisión total real (ARS$)</label>
+        <input class="input num" type="number" step="0.01" id="vfComisOverride" value="" placeholder="Ej: 3081,78 (procesamiento + retención)">
+        <div class="hint" style="color:var(--text-faint); font-size:11px; margin-top:4px;">Sobreescribe el % automático. Copiá el total de "Costo de procesamiento + Retención" de tu plataforma.</div>
+      </div>
       <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="vfSave">Añadir venta</button></div>`;
   }
   function gastoForm(existing){
@@ -4725,6 +4741,11 @@ compute();
     $('vfMetodo').addEventListener('change', recalcLiq);
     $('vfFecha').addEventListener('change', recalcLiq);
     $('vfMonto').addEventListener('input', recalcLiq);
+    // Toggle comisión override
+    $('vfComisOverrideChk').addEventListener('change', () => {
+      $('vfComisOverrideWrap').style.display = $('vfComisOverrideChk').checked ? '' : 'none';
+      if (!$('vfComisOverrideChk').checked) $('vfComisOverride').value = '';
+    });
     recalcLiq();
 
     $('vfSave').onclick = async () => {
@@ -4734,6 +4755,7 @@ compute();
       const cobrado = isInmediato;
       const proyectoId = $('vfProy').value;
       const cantidadVendida = Math.max(1, parseInt($('vfCantidad').value) || 1);
+      const comisOv = $('vfComisOverrideChk').checked ? parseFloat($('vfComisOverride').value) : null;
       const data = {
         id: uid(),
         fecha: $('vfFecha').value || todayISO(),
@@ -4745,6 +4767,7 @@ compute();
         fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
         proyectoId,
         cantidadVendida,
+        comisionOverride: (comisOv != null && isFinite(comisOv)) ? comisOv : null,
         createdAt: Date.now(),
       };
       store.sales.push(data); saveLocal();
@@ -4864,6 +4887,16 @@ compute();
     $('vfDesc').value = v.descripcion || '';
     $('vfMetodo').value = v.metodoPago || 'efectivo';
     if (v.fechaLiquidacion) { const wrap = $('vfLiqWrap'); if (wrap) { wrap.style.display = ''; $('vfLiq').value = v.fechaLiquidacion; } }
+    // Prefill comisión override
+    if (v.comisionOverride != null && v.comisionOverride !== '') {
+      $('vfComisOverrideChk').checked = true;
+      $('vfComisOverrideWrap').style.display = '';
+      $('vfComisOverride').value = v.comisionOverride;
+    }
+    $('vfComisOverrideChk').addEventListener('change', () => {
+      $('vfComisOverrideWrap').style.display = $('vfComisOverrideChk').checked ? '' : 'none';
+      if (!$('vfComisOverrideChk').checked) $('vfComisOverride').value = '';
+    });
     // Wire same recalc logic
     const recalcLiq = () => {
       const met = PAY_METHODS.find(m => m.id === $('vfMetodo').value);
@@ -4879,6 +4912,7 @@ compute();
     $('vfSave').onclick = async () => {
       const met = PAY_METHODS.find(m => m.id === $('vfMetodo').value);
       const cobrado = met && met.days === 0 ? true : v.cobrado;
+      const comisOv = $('vfComisOverrideChk').checked ? parseFloat($('vfComisOverride').value) : null;
       Object.assign(v, {
         proyectoId: $('vfProy').value,
         cantidadVendida: Math.max(1, parseInt($('vfCantidad').value) || 1),
@@ -4889,6 +4923,7 @@ compute();
         metodoPagoLabel: met ? met.name : '',
         cobrado,
         fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
+        comisionOverride: (comisOv != null && isFinite(comisOv)) ? comisOv : null,
       });
       saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', v.id, v); } catch(e){} }
