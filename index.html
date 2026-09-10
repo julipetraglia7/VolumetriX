@@ -4509,7 +4509,7 @@ compute();
         <div class="field"><label>Monto (ARS$) *</label><input class="input num" type="number" step="0.01" id="gfMonto" value="${Number(g.monto)||0}"></div>
         <div class="field"><label>Categoría *</label>
           <select class="input" id="gfCat">
-            ${['Materiales','Herramientas','Servicios','Publicidad','Envíos','Alquiler','Impuestos','Otros'].map(c => `<option ${g.categoria===c?'selected':''}>${c}</option>`).join('')}
+            ${['Materiales','Herramientas','Servicios','Software','Publicidad','Envíos','Alquiler','Impuestos','Otros'].map(c => `<option ${g.categoria===c?'selected':''}>${c}</option>`).join('')}
           </select>
         </div>
       </div>
