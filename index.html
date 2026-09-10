@@ -1705,6 +1705,52 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   color: white;
 }
 .color-sw.on { border-color: white; box-shadow: 0 0 0 2px var(--accent-magenta); }
+
+/* Inventory photo swatch */
+.inv-swatch.has-photo {
+  background-size: cover;
+  background-position: center;
+}
+.photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.photo-preview {
+  width: 60px; height: 60px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  background-size: cover;
+  background-position: center;
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint);
+  font-size: 22px;
+}
+.photo-upload label.btn { cursor: pointer; }
+.photo-upload input[type="file"] { display: none; }
+
+/* Componentes del inventario (calc view) */
+.componente-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.componente-row:last-child { border-bottom: none; }
+.componente-row .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-yellow);
+  text-align: right;
+}
+.componente-row select.input, .componente-row input.input { padding: 7px 10px; font-size: 13px; }
+@media (max-width: 640px) {
+  .componente-row { grid-template-columns: 1fr auto; }
+}
 </style>
 
 </head>
@@ -3597,6 +3643,7 @@ compute();
     if (name === 'proveedores') renderProveedores();
     if (name === 'contabilidad') renderContabilidad();
     if (name === 'organizacion') renderOrganizacion();
+    if (name === 'calc') { injectBOMPanel(); renderBOM(); }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   window.vxShowView = showView;
@@ -3704,8 +3751,10 @@ compute();
     if (!p || !p.snapshot) { toast('Proyecto sin datos'); return; }
     if (typeof window.appRestoreSnapshot === 'function') window.appRestoreSnapshot(p.snapshot);
     window.vxCurrentProjectId = id;
+    window.vxCurrentBOM = Array.isArray(p.bom) ? JSON.parse(JSON.stringify(p.bom)) : [];
     $('calcTitle').textContent = p.nombre || 'Proyecto';
     showView('calc');
+    setTimeout(() => { injectBOMPanel(); renderBOM(); }, 50);
     toast('Proyecto cargado ✓');
   }
 
@@ -3727,8 +3776,8 @@ compute();
     }
   }
   $('proyectosSearch').addEventListener('input', renderProyectos);
-  $('btnNuevoProyectoList').onclick = () => { window.vxCurrentProjectId = null; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); };
-  $('btnNuevoProyectoHero').onclick = () => { window.vxCurrentProjectId = null; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); };
+  $('btnNuevoProyectoList').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = []; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); setTimeout(renderBOM, 50); };
+  $('btnNuevoProyectoHero').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = []; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); setTimeout(renderBOM, 50); };
 
   /* Save current calc as project */
   $('btnGuardarProyecto').onclick = async () => {
@@ -3749,6 +3798,7 @@ compute();
       totalCostos: L.totalCostos || 0,
       estado: existing ? existing.estado : 'borrador',
       snapshot: snap,
+      bom: JSON.parse(JSON.stringify(window.vxCurrentBOM || [])),
       createdAt: existing ? existing.createdAt : Date.now(),
       updatedAt: Date.now(),
     };
@@ -3840,8 +3890,11 @@ compute();
     }
     body.innerHTML = items.map(m => {
       const low = (m.stock || 0) <= (m.umbral || 0);
+      const swStyle = m.photo
+        ? `background-image:url('${esc(m.photo)}'); background-size:cover; background-position:center;`
+        : `background:${esc(m.color || '#666')};`;
       return `<div class="inv-row" data-inv="${esc(m.id)}">
-        <div class="inv-swatch" style="background:${esc(m.color || '#666')};"></div>
+        <div class="inv-swatch${m.photo ? ' has-photo' : ''}" style="${swStyle}"></div>
         <div class="inv-name">
           <b>${esc(m.name)}</b>
           <span>${esc(m.marca || 'Sin marca')} · ${esc(m.tipo || m.category)}</span>
@@ -3884,8 +3937,11 @@ compute();
     renderInventario();
   });
 
+  const PACKAGING_SUBTIPOS = ['Caja','Viruta','Papel burbuja','Cinta scotch','Cinta frágil','Bolsa ecommerce','Etiqueta autoadhesiva','Otro'];
+  const INSUMOS_SUBTIPOS = ['LED RGB','LED común','Batería','Interruptor','Cable','Imán','Resorte','Tornillería','Adhesivo','Otro'];
+  function subtiposFor(cat){ return cat === 'Packaging' ? PACKAGING_SUBTIPOS : cat === 'Insumos' ? INSUMOS_SUBTIPOS : []; }
   function inventoryForm(item){
-    item = item || { id: '', category: 'Filamento', tipo: 'PLA', name: '', marca: '', color: '#FF0000', unidad: 'g', stock: 1000, umbral: 100, pricePerKg: 20000, proveedor: '', notas: '' };
+    item = item || { id: '', category: 'Filamento', tipo: 'PLA', subtipo: '', tamano: '', name: '', marca: '', color: '#FF0000', unidad: 'g', stock: 1000, umbral: 100, pricePerKg: 20000, proveedor: '', notas: '' };
     const provOptions = ['<option value="">Sin proveedor</option>'].concat(
       store.providers.map(p => `<option value="${esc(p.id)}" ${item.proveedor === p.id ? 'selected' : ''}>${esc(p.name)}</option>`)
     ).join('');
@@ -3898,6 +3954,17 @@ compute();
           <button data-cat="Producto" class="${item.category==='Producto'?'on':''}">Producto</button>
           <button data-cat="Postprocesado" class="${item.category==='Postprocesado'?'on':''}">Postproc.</button>
         </div>
+      </div>
+      <div class="field" id="ifSubtipoWrap" style="${subtiposFor(item.category).length ? '' : 'display:none;'}">
+        <label>Subtipo</label>
+        <select class="input" id="ifSubtipo">
+          <option value="">— Seleccionar —</option>
+          ${subtiposFor(item.category).map(s => `<option ${item.subtipo===s?'selected':''}>${esc(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="ifTamanoWrap" style="${item.category==='Packaging' && item.subtipo==='Caja' ? '' : 'display:none;'}">
+        <label>Tamaño (ej: S / M / L o "15×10×6 cm")</label>
+        <input class="input" id="ifTamano" value="${esc(item.tamano || '')}" placeholder="Ej: M — 20×15×8 cm">
       </div>
       <div class="field"><label>Nombre *</label><input class="input" id="ifName" value="${esc(item.name)}" placeholder="Ej: PLA Winkle Rojo"></div>
       <div class="field-row">
@@ -3929,23 +3996,79 @@ compute();
         <div class="field"><label>Umbral stock bajo</label><input class="input num" type="number" step="1" id="ifUmbral" value="${Number(item.umbral)||0}"></div>
         <div class="field"><label>Proveedor</label><select class="input" id="ifProv">${provOptions}</select></div>
       </div>
+      <div class="field"><label>Foto (opcional)</label>
+        <div class="photo-upload">
+          <div class="photo-preview" id="ifPhotoPreview" style="${item.photo ? `background-image:url('${esc(item.photo)}');` : ''}">${item.photo ? '' : '📷'}</div>
+          <label class="btn" for="ifPhotoInput">📷 Elegir foto</label>
+          <input type="file" id="ifPhotoInput" accept="image/*">
+          ${item.photo ? '<button class="btn ghost" id="ifPhotoDel" type="button">Quitar</button>' : ''}
+        </div>
+      </div>
       <div class="field"><label>Notas</label><textarea class="input" id="ifNotas" rows="2" placeholder="Notas adicionales…">${esc(item.notas || '')}</textarea></div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
         <button class="btn primary" id="ifSave" data-id="${esc(item.id)}">${item.id ? 'Guardar cambios' : 'Agregar'}</button>
       </div>`;
   }
+  function resizeImage(file, maxSize){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
   function wireInventoryForm(existing){
-    // Category picker
-    document.querySelectorAll('.seg-pick button[data-cat]').forEach(b => b.onclick = ev => {
+    const refreshSubtipos = () => {
+      const cat = document.querySelector('.seg-pick button[data-cat].on')?.dataset.cat || 'Filamento';
+      const opts = subtiposFor(cat);
+      const wrap = $('ifSubtipoWrap');
+      wrap.style.display = opts.length ? '' : 'none';
+      if (opts.length) {
+        const sel = $('ifSubtipo');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(s => `<option ${cur===s?'selected':''}>${esc(s)}</option>`).join('');
+      }
+      $('ifTamanoWrap').style.display = (cat === 'Packaging' && $('ifSubtipo')?.value === 'Caja') ? '' : 'none';
+    };
+    document.querySelectorAll('.seg-pick button[data-cat]').forEach(b => b.onclick = () => {
       document.querySelectorAll('.seg-pick button[data-cat]').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
-      b.dataset._selected = '1';
+      refreshSubtipos();
     });
-    // Color sync
+    $('ifSubtipo')?.addEventListener('change', () => {
+      const cat = document.querySelector('.seg-pick button[data-cat].on')?.dataset.cat;
+      $('ifTamanoWrap').style.display = (cat === 'Packaging' && $('ifSubtipo').value === 'Caja') ? '' : 'none';
+    });
     const ic = $('ifColor'), ih = $('ifColorHex');
     ic.oninput = () => ih.value = ic.value;
     ih.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ih.value)) ic.value = ih.value; };
+
+    // Photo upload
+    let currentPhoto = existing ? (existing.photo || '') : '';
+    const pi = $('ifPhotoInput'), pp = $('ifPhotoPreview'), pd = $('ifPhotoDel');
+    pi.onchange = async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try {
+        const data = await resizeImage(f, 400);
+        currentPhoto = data;
+        pp.style.backgroundImage = `url('${data}')`;
+        pp.textContent = '';
+      } catch(err) { toast('No se pudo cargar la foto'); }
+    };
+    if (pd) pd.onclick = () => { currentPhoto = ''; pp.style.backgroundImage = ''; pp.textContent = '📷'; pd.style.display = 'none'; };
 
     $('ifSave').onclick = async () => {
       const cat = document.querySelector('.seg-pick button[data-cat].on');
@@ -3955,6 +4078,8 @@ compute();
       const data = {
         id, category,
         tipo: $('ifTipo').value,
+        subtipo: $('ifSubtipo') ? $('ifSubtipo').value : '',
+        tamano: $('ifTamano') ? $('ifTamano').value.trim() : '',
         name: $('ifName').value.trim() || 'Sin nombre',
         marca: $('ifMarca').value.trim(),
         color: $('ifColorHex').value,
@@ -3962,9 +4087,10 @@ compute();
         stock: parseFloat($('ifStock').value) || 0,
         umbral: parseFloat($('ifUmbral').value) || 0,
         pricePerKg,
-        pricePerUnit: pricePerKg / 1000,
+        pricePerUnit: (category === 'Filamento') ? (pricePerKg / 1000) : pricePerKg,
         proveedor: $('ifProv').value,
         notas: $('ifNotas').value.trim(),
+        photo: currentPhoto,
         createdAt: existing ? existing.createdAt : Date.now(),
       };
       const idx = store.inventory.findIndex(x => x.id === id);
@@ -4288,11 +4414,19 @@ compute();
   }
 
   function ventaForm(){
+    const projOpts = ['<option value="">— Sin proyecto asociado —</option>'].concat(
+      store.projects.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}${p.cliente ? ' — ' + esc(p.cliente) : ''}</option>`)
+    ).join('');
     return `<h3>Nueva venta</h3>
-      <div class="field-row">
-        <div class="field"><label>Fecha de compra</label><input class="input" type="date" id="vfFecha" value="${todayISO()}"></div>
-        <div class="field"><label>Monto *</label><input class="input num" type="number" step="0.01" id="vfMonto" value="0"></div>
+      <div class="field"><label>🎯 Proyecto asociado (descuenta inventario)</label>
+        <select class="input" id="vfProy">${projOpts}</select>
+        <div class="hint" id="vfProyHint" style="font-size:11.5px; color:var(--text-faint); margin-top:4px;"></div>
       </div>
+      <div class="field-row">
+        <div class="field"><label>Cantidad vendida</label><input class="input num" type="number" step="1" min="1" id="vfCantidad" value="1"></div>
+        <div class="field"><label>Fecha de compra</label><input class="input" type="date" id="vfFecha" value="${todayISO()}"></div>
+      </div>
+      <div class="field"><label>Monto total *</label><input class="input num" type="number" step="0.01" id="vfMonto" value="0"></div>
       <div class="field"><label>Descripción</label><input class="input" id="vfDesc" placeholder="Ej: Pedido llaveros — Juan"></div>
       <div class="field"><label>💳 Modo de pago</label>
         <select class="input" id="vfMetodo">
@@ -4351,7 +4485,34 @@ compute();
     });
   }
   $('baVenta').onclick = () => {
-    openModal(ventaForm());
+    openModal(ventaForm(), true);
+    // Project selector wiring: show BOM preview
+    const refreshProyHint = () => {
+      const pid = $('vfProy').value;
+      const cant = parseInt($('vfCantidad').value) || 1;
+      const hint = $('vfProyHint');
+      if (!pid) { hint.textContent = 'Sin proyecto: no se descuenta stock.'; hint.style.color = 'var(--text-faint)'; return; }
+      const p = store.projects.find(x => x.id === pid);
+      if (!p || !p.bom || p.bom.length === 0) { hint.textContent = '⚠ Este proyecto no tiene materiales del inventario cargados.'; hint.style.color = 'var(--accent-yellow)'; return; }
+      // Check stock
+      const problems = [];
+      p.bom.forEach(b => {
+        const inv = store.inventory.find(x => x.id === b.inventoryId);
+        if (!inv) return;
+        const needed = (b.cantidad || 0) * cant;
+        if (needed > (inv.stock || 0)) problems.push(`${inv.name} (falta ${(needed - inv.stock).toFixed(1)} ${inv.unidad})`);
+      });
+      if (problems.length > 0) {
+        hint.innerHTML = '⚠ Stock insuficiente:<br>' + problems.map(esc).join('<br>');
+        hint.style.color = '#fca5a5';
+      } else {
+        hint.textContent = `✓ Se descontarán ${p.bom.length} materiales × ${cant} unidad(es) del inventario.`;
+        hint.style.color = '#6ee7a7';
+      }
+    };
+    $('vfProy').addEventListener('change', refreshProyHint);
+    $('vfCantidad').addEventListener('input', refreshProyHint);
+    refreshProyHint();
     const recalcLiq = () => {
       const metId = $('vfMetodo').value;
       const met = PAY_METHODS.find(m => m.id === metId);
@@ -4386,6 +4547,8 @@ compute();
       const met = PAY_METHODS.find(m => m.id === metId);
       const isInmediato = met && met.days === 0;
       const cobrado = isInmediato;
+      const proyectoId = $('vfProy').value;
+      const cantidadVendida = Math.max(1, parseInt($('vfCantidad').value) || 1);
       const data = {
         id: uid(),
         fecha: $('vfFecha').value || todayISO(),
@@ -4395,11 +4558,28 @@ compute();
         metodoPagoLabel: met ? met.name : '',
         cobrado,
         fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
+        proyectoId,
+        cantidadVendida,
         createdAt: Date.now(),
       };
       store.sales.push(data); saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', data.id, data); } catch(e){} }
-      closeModal(); renderContabilidad(); renderDashboard(); toast('Venta añadida ✓');
+      // Deduct inventory if project linked
+      let deducted = 0;
+      if (proyectoId) {
+        const res = await deductInventoryFromProject(proyectoId, cantidadVendida);
+        deducted = res.changed;
+        // Mark project as vendido if it wasn't
+        const p = store.projects.find(x => x.id === proyectoId);
+        if (p && p.estado !== 'vendido') {
+          p.estado = 'vendido';
+          if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('projects', p.id, p); } catch(e){} }
+          saveLocal();
+        }
+      }
+      closeModal();
+      renderContabilidad(); renderDashboard();
+      toast(deducted > 0 ? `Venta añadida — ${deducted} material(es) descontados ✓` : 'Venta añadida ✓');
     };
   };
   $('baGasto').onclick = () => {
@@ -4447,6 +4627,170 @@ compute();
     renderContabilidad();
   }
   $('btnNuevaVentaHero').onclick = () => { showView('contabilidad'); setTimeout(() => $('baVenta').click(), 100); };
+
+  /* ================= BOM (Materiales del proyecto) ================= */
+  window.vxCurrentBOM = [];
+
+  function injectBOMPanel(){
+    if ($('bomPanel')) return;
+    // Insert BOM panel inside calc view, before the results section
+    const calc = document.querySelector('#view-calc .wrap');
+    const results = calc?.querySelector('.results');
+    if (!calc || !results) return;
+    const panel = document.createElement('section');
+    panel.id = 'bomPanel';
+    panel.className = 'card';
+    panel.setAttribute('data-accent', 'magenta');
+    panel.style.borderLeftColor = 'var(--accent-magenta)';
+    panel.innerHTML = `
+      <h2 style="margin:0 0 12px;">
+        <span class="ico" style="color:var(--accent-magenta);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </span>
+        Materiales del proyecto (desde inventario)
+        <button class="btn small primary" id="btnBOMAdd" style="margin-left:auto;">+ Agregar</button>
+      </h2>
+      <div class="hint" style="margin-bottom:10px; color:var(--text-muted); font-size:12px;">
+        Elegí lo que consume una unidad de este proyecto. Cuando registres una venta vinculada, se descuenta del stock automáticamente.
+      </div>
+      <div id="bomList"></div>
+      <div id="bomEmpty" style="padding:20px; text-align:center; color:var(--text-faint); font-size:13px; display:none;">
+        Todavía no cargaste materiales del inventario para este proyecto.
+      </div>
+      <div id="bomSubtotal" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-family:'Fredoka',sans-serif; font-weight:600;">
+        <span>Subtotal materiales del inventario</span>
+        <span id="bomTotal" style="color:var(--accent-yellow); font-family:'JetBrains Mono',monospace;">ARS $ 0</span>
+      </div>
+    `;
+    calc.insertBefore(panel, results);
+    $('btnBOMAdd').onclick = openBOMPicker;
+    renderBOM();
+  }
+
+  function renderBOM(){
+    const list = $('bomList'); if (!list) return;
+    if (window.vxCurrentBOM.length === 0) {
+      list.innerHTML = '';
+      $('bomEmpty').style.display = '';
+      $('bomTotal').textContent = fmtMoney(0);
+      return;
+    }
+    $('bomEmpty').style.display = 'none';
+    let total = 0;
+    list.innerHTML = window.vxCurrentBOM.map((it, i) => {
+      const inv = store.inventory.find(x => x.id === it.inventoryId);
+      const price = inv ? (inv.category === 'Filamento' ? inv.pricePerKg / 1000 : (inv.pricePerUnit || inv.pricePerKg)) : (it.pricePerUnit || 0);
+      const cost = price * (it.cantidad || 0);
+      total += cost;
+      const stockOk = inv && (inv.stock || 0) >= (it.cantidad || 0);
+      const swatch = inv?.photo
+        ? `<div style="width:40px; height:40px; border-radius:8px; background:url('${esc(inv.photo)}') center/cover; border:1px solid var(--border);"></div>`
+        : `<div class="inv-swatch" style="background:${esc(inv?.color || '#666')};"></div>`;
+      return `<div class="inv-row" style="grid-template-columns:40px 1fr 100px 100px 90px 32px;">
+        ${swatch}
+        <div class="inv-name">
+          <b>${esc(inv?.name || it.name || 'Item borrado')}</b>
+          <span>${esc(inv?.subtipo || inv?.tipo || inv?.category || '')} · Stock: ${inv ? inv.stock : '?'} ${esc(inv?.unidad || it.unidad || '')}</span>
+        </div>
+        <div class="field" style="gap:2px;">
+          <label style="font-size:10px;">Cantidad</label>
+          <input class="input num" type="number" step="0.01" min="0" data-bom-qty="${i}" value="${it.cantidad || 0}" style="padding:5px 8px;">
+        </div>
+        <span class="inv-price">${fmtMoney(cost)}</span>
+        <span class="inv-stock ${stockOk ? '' : 'low'}">${inv ? '✓' : '✕'} stock</span>
+        <button class="icon-btn danger" data-bom-del="${i}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>`;
+    }).join('');
+    $('bomTotal').textContent = fmtMoney(total);
+    list.querySelectorAll('[data-bom-qty]').forEach(el => el.oninput = e => {
+      const i = +e.currentTarget.dataset.bomQty;
+      window.vxCurrentBOM[i].cantidad = parseFloat(e.currentTarget.value) || 0;
+      renderBOM();
+    });
+    list.querySelectorAll('[data-bom-del]').forEach(el => el.onclick = e => {
+      const i = +e.currentTarget.dataset.bomDel;
+      window.vxCurrentBOM.splice(i, 1);
+      renderBOM();
+    });
+  }
+
+  function openBOMPicker(){
+    const items = store.inventory.filter(x => x.category !== 'Postprocesado');
+    if (items.length === 0) {
+      openModal(`<h3>Sin inventario</h3><p>Cargá items en Inventario primero.</p><div class="modal-actions"><button class="btn primary" data-close>OK</button></div>`);
+      return;
+    }
+    const grouped = {};
+    items.forEach(x => { const k = x.category; (grouped[k] = grouped[k] || []).push(x); });
+    const html = `<h3>Agregar del inventario</h3>
+      <input class="input" id="bomSearch" placeholder="Buscar por nombre…" style="margin-bottom:10px;">
+      <div id="bomPickerList" style="max-height:380px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+      ${Object.keys(grouped).map(cat => `
+        <div>
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:6px; font-weight:600;">${esc(cat)}</div>
+          ${grouped[cat].map(x => {
+            const price = x.category === 'Filamento' ? x.pricePerKg / 1000 : (x.pricePerUnit || x.pricePerKg);
+            return `<div class="pick-item" data-pick="${esc(x.id)}" style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; cursor:pointer; background:var(--surface-2);">
+              ${x.photo ? `<div style="width:36px; height:36px; border-radius:6px; background:url('${esc(x.photo)}') center/cover;"></div>` : `<div class="inv-swatch" style="width:36px; height:36px; background:${esc(x.color || '#666')};"></div>`}
+              <div style="flex:1; min-width:0;">
+                <div style="font-weight:600; font-size:13px;">${esc(x.name)}</div>
+                <div style="font-size:11px; color:var(--text-faint);">${esc(x.subtipo || x.tipo || '')} · ${x.stock} ${esc(x.unidad)} en stock · ${fmtMoney(price)}/${esc(x.unidad)}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      `).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button></div>`;
+    openModal(html, true);
+    document.querySelectorAll('.pick-item').forEach(el => el.onclick = () => {
+      const id = el.dataset.pick;
+      const inv = store.inventory.find(x => x.id === id);
+      if (!inv) return;
+      if (window.vxCurrentBOM.find(b => b.inventoryId === id)) { toast('Ya está agregado'); return; }
+      window.vxCurrentBOM.push({
+        inventoryId: id,
+        name: inv.name,
+        cantidad: inv.unidad === 'unidades' ? 1 : 10,
+        unidad: inv.unidad,
+        pricePerUnit: inv.category === 'Filamento' ? inv.pricePerKg / 1000 : (inv.pricePerUnit || inv.pricePerKg),
+      });
+      closeModal(); renderBOM(); toast('Material agregado ✓');
+    });
+    $('bomSearch').oninput = e => {
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll('.pick-item').forEach(el => {
+        const t = el.textContent.toLowerCase();
+        el.style.display = (!q || t.includes(q)) ? '' : 'none';
+      });
+    };
+  }
+
+  // Inject BOM panel when calc view is shown
+  const _showViewOrig = window.vxShowView;
+
+  /* ================= Deduct inventory from a sale ================= */
+  async function deductInventoryFromProject(proyectoId, cantidadVendida){
+    const proj = store.projects.find(p => p.id === proyectoId);
+    if (!proj || !proj.bom || proj.bom.length === 0) return { changed: 0 };
+    let changed = 0;
+    proj.bom.forEach(b => {
+      const inv = store.inventory.find(x => x.id === b.inventoryId);
+      if (!inv) return;
+      const total = (b.cantidad || 0) * (cantidadVendida || 1);
+      inv.stock = Math.max(0, (inv.stock || 0) - total);
+      changed++;
+    });
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+      for (const b of proj.bom) {
+        const inv = store.inventory.find(x => x.id === b.inventoryId);
+        if (inv) { try { await window.cloudSync.saveDoc('inventory', inv.id, inv); } catch(e){} }
+      }
+    }
+    return { changed };
+  }
+  window.vxDeductInventoryFromProject = deductInventoryFromProject;
 
   /* ================= ORGANIZACIÓN ================= */
   let calDate = new Date();
