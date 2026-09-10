@@ -3671,7 +3671,29 @@ compute();
   }
   loadLocal();
   seedDefaults();
+  autoReleaseSales();
   saveLocal();
+
+  // Auto-marca como cobradas las ventas cuya fecha de liberación ya pasó.
+  // Se ejecuta al arrancar, al renderizar contabilidad/dashboard y al
+  // hidratar desde la nube. Silencioso — no muestra toast.
+  function autoReleaseSales(){
+    const today = new Date().toISOString().slice(0,10);
+    let changed = false;
+    (store.sales || []).forEach(s => {
+      if (s.cobrado === false && s.fechaLiquidacion && s.fechaLiquidacion <= today) {
+        s.cobrado = true;
+        s._autoReleased = true; // marca opcional para historial
+        changed = true;
+        if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+          try { window.cloudSync.saveDoc('sales', s.id, s); } catch(e){}
+        }
+      }
+    });
+    if (changed) saveLocal();
+    return changed;
+  }
+  window.vxAutoReleaseSales = autoReleaseSales;
 
   window.vxStore = store;
   window.vxSaveLocal = saveLocal;
@@ -3699,6 +3721,7 @@ compute();
 
   /* ================= Dashboard ================= */
   function renderDashboard(){
+    autoReleaseSales();
     $('statProyectos').textContent = store.projects.length;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -4314,6 +4337,7 @@ compute();
   let cntTab = 'inicio';
 
   function renderContabilidad(){
+    autoReleaseSales();
     const cobrado = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + (Number(v.monto)||0), 0);
     const pendiente = store.sales.filter(s => s.cobrado === false).reduce((s, v) => s + (Number(v.monto)||0), 0);
     const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto)||0), 0);
@@ -5628,6 +5652,7 @@ compute();
     } else if (arr.length > 0) {
       store[col] = arr; saveLocal();
     }
+    if (col === 'sales') autoReleaseSales();
     const active = document.querySelector('.view.active');
     if (!active) return;
     if (active.id === 'view-dashboard') renderDashboard();
