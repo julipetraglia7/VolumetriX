@@ -3643,7 +3643,7 @@ compute();
     if (name === 'proveedores') renderProveedores();
     if (name === 'contabilidad') renderContabilidad();
     if (name === 'organizacion') renderOrganizacion();
-    if (name === 'calc') { injectBOMPanel(); renderBOM(); }
+    if (name === 'calc') { setTimeout(() => window.vxEnhanceCalc && window.vxEnhanceCalc(), 30); }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   window.vxShowView = showView;
@@ -3751,10 +3751,16 @@ compute();
     if (!p || !p.snapshot) { toast('Proyecto sin datos'); return; }
     if (typeof window.appRestoreSnapshot === 'function') window.appRestoreSnapshot(p.snapshot);
     window.vxCurrentProjectId = id;
-    window.vxCurrentBOM = Array.isArray(p.bom) ? JSON.parse(JSON.stringify(p.bom)) : [];
+    // Restore BOM (nueva estructura)
+    if (p.bom && !Array.isArray(p.bom) && typeof p.bom === 'object') {
+      window.vxCurrentBOM = JSON.parse(JSON.stringify(p.bom));
+    } else {
+      window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] };
+    }
+    ensureBOMShape();
     $('calcTitle').textContent = p.nombre || 'Proyecto';
     showView('calc');
-    setTimeout(() => { injectBOMPanel(); renderBOM(); }, 50);
+    setTimeout(() => { window.vxEnhanceCalc && window.vxEnhanceCalc(); }, 60);
     toast('Proyecto cargado ✓');
   }
 
@@ -3776,8 +3782,8 @@ compute();
     }
   }
   $('proyectosSearch').addEventListener('input', renderProyectos);
-  $('btnNuevoProyectoList').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = []; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); setTimeout(renderBOM, 50); };
-  $('btnNuevoProyectoHero').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = []; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); setTimeout(renderBOM, 50); };
+  $('btnNuevoProyectoList').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] }; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); };
+  $('btnNuevoProyectoHero').onclick = () => { window.vxCurrentProjectId = null; window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] }; $('calcTitle').textContent = 'Nuevo proyecto'; showView('calc'); };
 
   /* Save current calc as project */
   $('btnGuardarProyecto').onclick = async () => {
@@ -4628,163 +4634,319 @@ compute();
   }
   $('btnNuevaVentaHero').onclick = () => { showView('contabilidad'); setTimeout(() => $('baVenta').click(), 100); };
 
-  /* ================= BOM (Materiales del proyecto) ================= */
-  window.vxCurrentBOM = [];
+  /* ================= BOM (Materiales del proyecto) =================
+     Estructura:
+       window.vxCurrentBOM = {
+         filamentos: [{ pieceId, filId, invId, cantidad }],  // por filamento
+         insumos:    [{ invId, cantidad }],                  // globales
+         packaging:  [{ invId, cantidad }],                  // globales
+       }
+     Se sincroniza con la calc legacy:
+       - Filamentos → auto-completan precio/marca/color en el field legacy;
+         gramos queda editable manualmente.
+       - Insumos → suma se escribe en #insumos (monto fijo).
+       - Packaging → suma se escribe en #packagingMonto (monto fijo).
+  ================================================================== */
+  window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] };
 
-  function injectBOMPanel(){
-    if ($('bomPanel')) return;
-    // Insert BOM panel inside calc view, before the results section
-    const calc = document.querySelector('#view-calc .wrap');
-    const results = calc?.querySelector('.results');
-    if (!calc || !results) return;
-    const panel = document.createElement('section');
-    panel.id = 'bomPanel';
-    panel.className = 'card';
-    panel.setAttribute('data-accent', 'magenta');
-    panel.style.borderLeftColor = 'var(--accent-magenta)';
-    panel.innerHTML = `
-      <h2 style="margin:0 0 12px;">
-        <span class="ico" style="color:var(--accent-magenta);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        </span>
-        Materiales del proyecto (desde inventario)
-        <button class="btn small primary" id="btnBOMAdd" style="margin-left:auto;">+ Agregar</button>
-      </h2>
-      <div class="hint" style="margin-bottom:10px; color:var(--text-muted); font-size:12px;">
-        Elegí lo que consume una unidad de este proyecto. Cuando registres una venta vinculada, se descuenta del stock automáticamente.
-      </div>
-      <div id="bomList"></div>
-      <div id="bomEmpty" style="padding:20px; text-align:center; color:var(--text-faint); font-size:13px; display:none;">
-        Todavía no cargaste materiales del inventario para este proyecto.
-      </div>
-      <div id="bomSubtotal" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-family:'Fredoka',sans-serif; font-weight:600;">
-        <span>Subtotal materiales del inventario</span>
-        <span id="bomTotal" style="color:var(--accent-yellow); font-family:'JetBrains Mono',monospace;">ARS $ 0</span>
-      </div>
-    `;
-    calc.insertBefore(panel, results);
-    $('btnBOMAdd').onclick = openBOMPicker;
-    renderBOM();
+  function ensureBOMShape(){
+    if (Array.isArray(window.vxCurrentBOM)) {
+      // legacy: unified list. Reset.
+      window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] };
+    } else if (!window.vxCurrentBOM || typeof window.vxCurrentBOM !== 'object') {
+      window.vxCurrentBOM = { filamentos: [], insumos: [], packaging: [] };
+    } else {
+      window.vxCurrentBOM.filamentos = window.vxCurrentBOM.filamentos || [];
+      window.vxCurrentBOM.insumos = window.vxCurrentBOM.insumos || [];
+      window.vxCurrentBOM.packaging = window.vxCurrentBOM.packaging || [];
+    }
+  }
+  ensureBOMShape();
+
+  // Backwards compat: old single-panel BOM panel — no longer used
+  function injectBOMPanel(){ /* deprecated: sección eliminada, ahora hay pickers integrados por sección */ }
+
+  function renderBOM(){ /* legacy no-op, actual render is per-section */ }
+
+  // ============ Filamento picker por pieza ============
+  function invByCat(cat){ return store.inventory.filter(x => x.category === cat); }
+  function priceForInv(inv){
+    if (!inv) return 0;
+    return inv.category === 'Filamento' ? (inv.pricePerKg || 0) / 1000 : (inv.pricePerUnit || inv.pricePerKg || 0);
   }
 
-  function renderBOM(){
-    const list = $('bomList'); if (!list) return;
-    if (window.vxCurrentBOM.length === 0) {
-      list.innerHTML = '';
-      $('bomEmpty').style.display = '';
-      $('bomTotal').textContent = fmtMoney(0);
-      return;
+  // For each piece in the legacy pieces container, add an "Elegir filamento del inventario" select
+  function enhancePieces(){
+    const container = document.getElementById('piecesContainer');
+    if (!container) return;
+    container.querySelectorAll('.piece').forEach((pieceEl, pieceIdx) => {
+      // Find the piece id from the legacy inputs
+      const nameInput = pieceEl.querySelector('input.name');
+      if (!nameInput) return;
+      const pieceId = nameInput.dataset.piece;
+      pieceEl.querySelectorAll('.filament').forEach((filEl, filIdx) => {
+        // Try to identify filId
+        const anyInput = filEl.querySelector('[data-fil]');
+        if (!anyInput) return;
+        const filId = anyInput.dataset.fil;
+        // Skip if already enhanced
+        if (filEl.querySelector('.vx-fil-picker')) return;
+        // Existing selection
+        const existing = window.vxCurrentBOM.filamentos.find(f => f.pieceId === pieceId && f.filId === filId);
+        // Build the picker
+        const pickerWrap = document.createElement('div');
+        pickerWrap.className = 'vx-fil-picker';
+        pickerWrap.style.cssText = 'margin: 10px 0 6px; padding: 10px; background: rgba(194,0,122,.06); border: 1px solid rgba(194,0,122,.25); border-radius: 8px;';
+        const filaments = invByCat('Filamento');
+        const opts = ['<option value="">— Elegir filamento del inventario —</option>']
+          .concat(filaments.map(x => `<option value="${esc(x.id)}" ${existing && existing.invId === x.id ? 'selected' : ''}>${esc(x.name)} · ${x.stock}g · ${fmtMoney(priceForInv(x)*1000)}/kg</option>`))
+          .join('');
+        pickerWrap.innerHTML = `
+          <label style="font-size:11.5px; color:var(--accent-magenta); font-weight:600; letter-spacing:.05em; display:flex; align-items:center; gap:6px; margin-bottom:6px;">🎯 Vincular al inventario</label>
+          <select class="input" data-vxfil="${esc(pieceId)}|${esc(filId)}">${opts}</select>
+        `;
+        // Insert before the marca/color/precio row inside filament
+        const insertBefore = filEl.querySelector('.grid');
+        if (insertBefore) filEl.insertBefore(pickerWrap, insertBefore);
+        else filEl.appendChild(pickerWrap);
+
+        // Wire change
+        const sel = pickerWrap.querySelector('select');
+        sel.addEventListener('change', () => {
+          const invId = sel.value;
+          const inv = store.inventory.find(x => x.id === invId);
+          // Update BOM
+          window.vxCurrentBOM.filamentos = window.vxCurrentBOM.filamentos.filter(f => !(f.pieceId === pieceId && f.filId === filId));
+          if (inv) {
+            const gramosInput = filEl.querySelector('.fil-gramos');
+            const gramos = gramosInput ? (parseFloat(gramosInput.value) || 0) : 0;
+            window.vxCurrentBOM.filamentos.push({ pieceId, filId, invId, cantidad: gramos });
+            // Auto-fill legacy fields
+            const priceInp = filEl.querySelector('.fil-precio');
+            const marcaInp = filEl.querySelector('.fil-marca');
+            const colorInp = filEl.querySelector('.fil-color');
+            if (priceInp) { priceInp.value = inv.pricePerKg || 0; priceInp.dispatchEvent(new Event('input', { bubbles: true })); }
+            if (marcaInp) { marcaInp.value = inv.marca || ''; marcaInp.dispatchEvent(new Event('input', { bubbles: true })); }
+            if (colorInp) { colorInp.value = inv.name || ''; colorInp.dispatchEvent(new Event('input', { bubbles: true })); }
+          }
+          if (typeof window.appCompute === 'function') window.appCompute();
+        });
+
+        // Wire the gramos input to also update BOM
+        const gramosInput = filEl.querySelector('.fil-gramos');
+        if (gramosInput) {
+          gramosInput.addEventListener('input', () => {
+            const e = window.vxCurrentBOM.filamentos.find(f => f.pieceId === pieceId && f.filId === filId);
+            if (e) e.cantidad = parseFloat(gramosInput.value) || 0;
+          });
+        }
+      });
+    });
+  }
+
+  // ============ Insumos & Packaging pickers ============
+  function enhanceExtras(){
+    // Enhance the "Insumos (monto fijo)" section
+    const insumosInput = document.getElementById('insumos');
+    if (insumosInput && !document.getElementById('vxInsumosPicker')) {
+      const parentField = insumosInput.closest('.field') || insumosInput.parentElement;
+      if (parentField) {
+        parentField.insertAdjacentHTML('afterend', renderPickerHTML('vxInsumosPicker', 'Insumos', '🧩', 'insumos'));
+        insumosInput.style.display = 'none';
+        parentField.querySelector('label').textContent = 'Insumos — desde inventario';
+      }
     }
-    $('bomEmpty').style.display = 'none';
+    const packInput = document.getElementById('packagingMonto');
+    if (packInput && !document.getElementById('vxPackagingPicker')) {
+      const parentField = packInput.closest('.extra-row') || packInput.closest('.field') || packInput.parentElement;
+      if (parentField) {
+        parentField.insertAdjacentHTML('afterend', renderPickerHTML('vxPackagingPicker', 'Packaging', '📦', 'packaging'));
+        // Hide the entire packaging row (monto + modo + horas)
+        parentField.style.display = 'none';
+      }
+    }
+    renderInsumosPicker();
+    renderPackagingPicker();
+  }
+  function renderPickerHTML(id, label, emoji, kind){
+    return `<div id="${id}" class="vx-picker" style="margin-top:14px; padding:12px; background:rgba(139,44,165,.08); border:1px solid rgba(139,44,165,.28); border-radius:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <b style="font-family:'Fredoka',sans-serif; font-size:13px; color:var(--text);">${emoji} ${esc(label)} — desde inventario</b>
+        <button class="btn small primary" data-vx-add="${kind}">+ Agregar</button>
+      </div>
+      <div class="vx-picker-list" data-vx-list="${kind}"></div>
+      <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:12.5px;">
+        <span style="color:var(--text-muted);">Total ${esc(label.toLowerCase())}</span>
+        <span data-vx-total="${kind}" style="font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--accent-yellow);">ARS $ 0</span>
+      </div>
+    </div>`;
+  }
+  function renderInsumosPicker(){
+    const list = document.querySelector('[data-vx-list="insumos"]');
+    const totalEl = document.querySelector('[data-vx-total="insumos"]');
+    if (!list) return;
+    const items = window.vxCurrentBOM.insumos;
     let total = 0;
-    list.innerHTML = window.vxCurrentBOM.map((it, i) => {
-      const inv = store.inventory.find(x => x.id === it.inventoryId);
-      const price = inv ? (inv.category === 'Filamento' ? inv.pricePerKg / 1000 : (inv.pricePerUnit || inv.pricePerKg)) : (it.pricePerUnit || 0);
-      const cost = price * (it.cantidad || 0);
-      total += cost;
-      const stockOk = inv && (inv.stock || 0) >= (it.cantidad || 0);
-      const swatch = inv?.photo
-        ? `<div style="width:40px; height:40px; border-radius:8px; background:url('${esc(inv.photo)}') center/cover; border:1px solid var(--border);"></div>`
-        : `<div class="inv-swatch" style="background:${esc(inv?.color || '#666')};"></div>`;
-      return `<div class="inv-row" style="grid-template-columns:40px 1fr 100px 100px 90px 32px;">
-        ${swatch}
-        <div class="inv-name">
-          <b>${esc(inv?.name || it.name || 'Item borrado')}</b>
-          <span>${esc(inv?.subtipo || inv?.tipo || inv?.category || '')} · Stock: ${inv ? inv.stock : '?'} ${esc(inv?.unidad || it.unidad || '')}</span>
-        </div>
-        <div class="field" style="gap:2px;">
-          <label style="font-size:10px;">Cantidad</label>
-          <input class="input num" type="number" step="0.01" min="0" data-bom-qty="${i}" value="${it.cantidad || 0}" style="padding:5px 8px;">
-        </div>
-        <span class="inv-price">${fmtMoney(cost)}</span>
-        <span class="inv-stock ${stockOk ? '' : 'low'}">${inv ? '✓' : '✕'} stock</span>
-        <button class="icon-btn danger" data-bom-del="${i}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-      </div>`;
-    }).join('');
-    $('bomTotal').textContent = fmtMoney(total);
-    list.querySelectorAll('[data-bom-qty]').forEach(el => el.oninput = e => {
-      const i = +e.currentTarget.dataset.bomQty;
-      window.vxCurrentBOM[i].cantidad = parseFloat(e.currentTarget.value) || 0;
-      renderBOM();
+    list.innerHTML = items.length === 0
+      ? '<div style="font-size:12px; color:var(--text-faint); text-align:center; padding:10px;">Sin insumos. Presioná "+ Agregar" para elegir del inventario.</div>'
+      : items.map((it, i) => rowHTML(it, i, 'insumos', total => total)).join('');
+    total = items.reduce((s, it) => {
+      const inv = store.inventory.find(x => x.id === it.invId);
+      return s + priceForInv(inv) * (it.cantidad || 0);
+    }, 0);
+    totalEl.textContent = fmtMoney(total);
+    // Sync total to legacy input
+    const legacy = document.getElementById('insumos');
+    if (legacy) { legacy.value = Math.round(total); legacy.dispatchEvent(new Event('input', { bubbles: true })); }
+    wireRowEvents(list, 'insumos');
+  }
+  function renderPackagingPicker(){
+    const list = document.querySelector('[data-vx-list="packaging"]');
+    const totalEl = document.querySelector('[data-vx-total="packaging"]');
+    if (!list) return;
+    const items = window.vxCurrentBOM.packaging;
+    let total = items.reduce((s, it) => {
+      const inv = store.inventory.find(x => x.id === it.invId);
+      return s + priceForInv(inv) * (it.cantidad || 0);
+    }, 0);
+    list.innerHTML = items.length === 0
+      ? '<div style="font-size:12px; color:var(--text-faint); text-align:center; padding:10px;">Sin packaging. Presioná "+ Agregar" para elegir del inventario.</div>'
+      : items.map((it, i) => rowHTML(it, i, 'packaging')).join('');
+    totalEl.textContent = fmtMoney(total);
+    // Sync total to legacy input
+    const legacy = document.getElementById('packagingMonto');
+    if (legacy) { legacy.value = Math.round(total); legacy.dispatchEvent(new Event('input', { bubbles: true })); }
+    wireRowEvents(list, 'packaging');
+  }
+  function rowHTML(it, i, kind){
+    const inv = store.inventory.find(x => x.id === it.invId);
+    const price = priceForInv(inv);
+    const cost = price * (it.cantidad || 0);
+    const stockOk = inv && (inv.stock || 0) >= (it.cantidad || 0);
+    const swatch = inv?.photo
+      ? `<div style="width:34px; height:34px; border-radius:8px; background:url('${esc(inv.photo)}') center/cover; border:1px solid var(--border);"></div>`
+      : `<div class="inv-swatch" style="width:34px; height:34px; background:${esc(inv?.color || '#666')};"></div>`;
+    return `<div style="display:grid; grid-template-columns:34px 1fr 90px 80px 28px; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--border);">
+      ${swatch}
+      <div style="min-width:0;">
+        <div style="font-weight:600; font-size:12.5px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(inv?.name || '?')}</div>
+        <div style="font-size:10.5px; color:var(--text-faint);">${esc(inv?.subtipo || inv?.tipo || '')} · Stock: ${inv ? inv.stock : '?'} ${esc(inv?.unidad || '')} · ${fmtMoney(price)}/${esc(inv?.unidad || 'u')}</div>
+      </div>
+      <input class="input num" type="number" step="0.01" min="0" data-vx-qty="${kind}|${i}" value="${it.cantidad || 0}" style="padding:5px 8px; font-size:12px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:${stockOk ? 'var(--accent-yellow)' : '#fca5a5'};">${fmtMoney(cost)}</span>
+      <button class="icon-btn danger" data-vx-del="${kind}|${i}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+    </div>`;
+  }
+  function wireRowEvents(list, kind){
+    list.querySelectorAll(`[data-vx-qty^="${kind}"]`).forEach(el => el.oninput = e => {
+      const [, i] = e.currentTarget.dataset.vxQty.split('|');
+      window.vxCurrentBOM[kind][+i].cantidad = parseFloat(e.currentTarget.value) || 0;
+      kind === 'insumos' ? renderInsumosPicker() : renderPackagingPicker();
     });
-    list.querySelectorAll('[data-bom-del]').forEach(el => el.onclick = e => {
-      const i = +e.currentTarget.dataset.bomDel;
-      window.vxCurrentBOM.splice(i, 1);
-      renderBOM();
+    list.querySelectorAll(`[data-vx-del^="${kind}"]`).forEach(el => el.onclick = e => {
+      const [, i] = e.currentTarget.dataset.vxDel.split('|');
+      window.vxCurrentBOM[kind].splice(+i, 1);
+      kind === 'insumos' ? renderInsumosPicker() : renderPackagingPicker();
     });
   }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-vx-add]');
+    if (!b) return;
+    const kind = b.dataset.vxAdd;
+    const cat = kind === 'insumos' ? 'Insumos' : 'Packaging';
+    openInventoryPicker(cat, invId => {
+      const inv = store.inventory.find(x => x.id === invId);
+      if (!inv) return;
+      if (window.vxCurrentBOM[kind].find(x => x.invId === invId)) { toast('Ya está agregado'); return; }
+      window.vxCurrentBOM[kind].push({ invId, cantidad: 1 });
+      kind === 'insumos' ? renderInsumosPicker() : renderPackagingPicker();
+      toast('Agregado ✓');
+    });
+  });
 
-  function openBOMPicker(){
-    const items = store.inventory.filter(x => x.category !== 'Postprocesado');
+  function openInventoryPicker(category, onPick){
+    const items = store.inventory.filter(x => x.category === category);
     if (items.length === 0) {
-      openModal(`<h3>Sin inventario</h3><p>Cargá items en Inventario primero.</p><div class="modal-actions"><button class="btn primary" data-close>OK</button></div>`);
+      openModal(`<h3>Sin items de ${esc(category)}</h3><p style="color:var(--text-muted);">Cargá items en Inventario > pestaña Materiales primero.</p><div class="modal-actions"><button class="btn primary" data-close>OK</button></div>`);
       return;
     }
-    const grouped = {};
-    items.forEach(x => { const k = x.category; (grouped[k] = grouped[k] || []).push(x); });
-    const html = `<h3>Agregar del inventario</h3>
-      <input class="input" id="bomSearch" placeholder="Buscar por nombre…" style="margin-bottom:10px;">
-      <div id="bomPickerList" style="max-height:380px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
-      ${Object.keys(grouped).map(cat => `
-        <div>
-          <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:6px; font-weight:600;">${esc(cat)}</div>
-          ${grouped[cat].map(x => {
-            const price = x.category === 'Filamento' ? x.pricePerKg / 1000 : (x.pricePerUnit || x.pricePerKg);
-            return `<div class="pick-item" data-pick="${esc(x.id)}" style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; cursor:pointer; background:var(--surface-2);">
+    // Group by subtipo when Packaging
+    const groups = {};
+    items.forEach(x => { const k = x.subtipo || 'Sin subtipo'; (groups[k] = groups[k] || []).push(x); });
+    const html = `<h3>Elegir ${esc(category)} del inventario</h3>
+      <input class="input" id="pickSearch" placeholder="Buscar…" style="margin-bottom:10px;">
+      <div style="max-height:400px; overflow-y:auto;">
+      ${Object.keys(groups).map(g => `
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:6px; font-weight:600;">${esc(g)}</div>
+          ${groups[g].map(x => `
+            <div class="pick-item" data-pick="${esc(x.id)}" style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; cursor:pointer; background:var(--surface-2);">
               ${x.photo ? `<div style="width:36px; height:36px; border-radius:6px; background:url('${esc(x.photo)}') center/cover;"></div>` : `<div class="inv-swatch" style="width:36px; height:36px; background:${esc(x.color || '#666')};"></div>`}
               <div style="flex:1; min-width:0;">
-                <div style="font-weight:600; font-size:13px;">${esc(x.name)}</div>
-                <div style="font-size:11px; color:var(--text-faint);">${esc(x.subtipo || x.tipo || '')} · ${x.stock} ${esc(x.unidad)} en stock · ${fmtMoney(price)}/${esc(x.unidad)}</div>
+                <div style="font-weight:600; font-size:13px;">${esc(x.name)}${x.tamano ? ' — ' + esc(x.tamano) : ''}</div>
+                <div style="font-size:11px; color:var(--text-faint);">${x.stock} ${esc(x.unidad)} · ${fmtMoney(priceForInv(x))}/${esc(x.unidad)}</div>
               </div>
-            </div>`;
-          }).join('')}
+            </div>
+          `).join('')}
         </div>
       `).join('')}
       </div>
       <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button></div>`;
     openModal(html, true);
-    document.querySelectorAll('.pick-item').forEach(el => el.onclick = () => {
-      const id = el.dataset.pick;
-      const inv = store.inventory.find(x => x.id === id);
-      if (!inv) return;
-      if (window.vxCurrentBOM.find(b => b.inventoryId === id)) { toast('Ya está agregado'); return; }
-      window.vxCurrentBOM.push({
-        inventoryId: id,
-        name: inv.name,
-        cantidad: inv.unidad === 'unidades' ? 1 : 10,
-        unidad: inv.unidad,
-        pricePerUnit: inv.category === 'Filamento' ? inv.pricePerKg / 1000 : (inv.pricePerUnit || inv.pricePerKg),
-      });
-      closeModal(); renderBOM(); toast('Material agregado ✓');
-    });
-    $('bomSearch').oninput = e => {
+    document.querySelectorAll('.pick-item').forEach(el => el.onclick = () => { const id = el.dataset.pick; closeModal(); onPick(id); });
+    $('pickSearch').oninput = e => {
       const q = e.target.value.toLowerCase();
-      document.querySelectorAll('.pick-item').forEach(el => {
-        const t = el.textContent.toLowerCase();
-        el.style.display = (!q || t.includes(q)) ? '' : 'none';
-      });
+      document.querySelectorAll('.pick-item').forEach(el => el.style.display = (!q || el.textContent.toLowerCase().includes(q)) ? '' : 'none');
     };
   }
 
-  // Inject BOM panel when calc view is shown
-  const _showViewOrig = window.vxShowView;
+  // MutationObserver: when legacy renderPieces re-renders, re-enhance
+  const piecesObserver = new MutationObserver(() => {
+    enhancePieces();
+  });
+  function attachPiecesObserver(){
+    const c = document.getElementById('piecesContainer');
+    if (c && !c._vxObserved) {
+      c._vxObserved = true;
+      piecesObserver.observe(c, { childList: true, subtree: true });
+    }
+  }
+
+  function enhanceCalcView(){
+    attachPiecesObserver();
+    enhancePieces();
+    enhanceExtras();
+  }
+  window.vxEnhanceCalc = enhanceCalcView;
 
   /* ================= Deduct inventory from a sale ================= */
   async function deductInventoryFromProject(proyectoId, cantidadVendida){
     const proj = store.projects.find(p => p.id === proyectoId);
-    if (!proj || !proj.bom || proj.bom.length === 0) return { changed: 0 };
+    if (!proj || !proj.bom) return { changed: 0 };
     let changed = 0;
-    proj.bom.forEach(b => {
-      const inv = store.inventory.find(x => x.id === b.inventoryId);
-      if (!inv) return;
-      const total = (b.cantidad || 0) * (cantidadVendida || 1);
-      inv.stock = Math.max(0, (inv.stock || 0) - total);
-      changed++;
-    });
+    const walk = (arr) => {
+      (arr || []).forEach(b => {
+        const inv = store.inventory.find(x => x.id === b.invId || x.id === b.inventoryId);
+        if (!inv) return;
+        const total = (b.cantidad || 0) * (cantidadVendida || 1);
+        inv.stock = Math.max(0, (inv.stock || 0) - total);
+        changed++;
+      });
+    };
+    if (Array.isArray(proj.bom)) walk(proj.bom); // legacy shape
+    else {
+      walk(proj.bom.filamentos);
+      walk(proj.bom.insumos);
+      walk(proj.bom.packaging);
+    }
     saveLocal();
     if (window.cloudSync && window.cloudSync.isLoggedIn()) {
-      for (const b of proj.bom) {
-        const inv = store.inventory.find(x => x.id === b.inventoryId);
+      const allIds = new Set();
+      const collect = arr => (arr || []).forEach(b => allIds.add(b.invId || b.inventoryId));
+      if (Array.isArray(proj.bom)) collect(proj.bom);
+      else { collect(proj.bom.filamentos); collect(proj.bom.insumos); collect(proj.bom.packaging); }
+      for (const id of allIds) {
+        const inv = store.inventory.find(x => x.id === id);
         if (inv) { try { await window.cloudSync.saveDoc('inventory', inv.id, inv); } catch(e){} }
       }
     }
