@@ -4572,7 +4572,7 @@ compute();
   const PAY_METHODS = [
     { id: 'efectivo',      name: 'Efectivo',              days: 0,   fee: 0 },
     { id: 'transferencia', name: 'Transferencia',         days: 0,   fee: 0 },
-    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 4.22 },
+    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 4.2229 },
     { id: 'mercado_pago',  name: 'Mercado Pago',          days: 18,  fee: 4.30 },
     { id: 'otro',          name: 'Otro (definir manual)', days: null, fee: 0 },
   ];
@@ -4704,7 +4704,7 @@ compute();
       }
       if (feeEl) {
         feeEl.textContent = fee > 0 && monto > 0
-          ? `− ${fmtMoney(cost)} (${fee}% de ${met.name}) → neto ${fmtMoney(monto - cost)}`
+          ? `− ${fmtMoney(cost)} (${fee.toFixed(2)}% de ${met.name}) → neto ${fmtMoney(monto - cost)}`
           : '';
       }
       if (!met || met.days === 0) {
