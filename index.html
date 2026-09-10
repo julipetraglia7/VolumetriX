@@ -3651,11 +3651,14 @@ compute();
   function saveLocal(){
     try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch(e){}
   }
+  const SEED_FLAG = 'volumetrix-seeded-v2';
   function seedDefaults(){
+    // Solo la primera vez que se abre la app. Después nunca más — respeta las eliminaciones del usuario.
+    if (localStorage.getItem(SEED_FLAG) === '1') return;
     if (store.printers.length === 0) {
       store.printers.push(
-        { id: uid(), name: 'Creality Ender 3 V2', wattage: 90, amortPerHour: 120, createdAt: Date.now() },
-        { id: uid(), name: 'Bambu Lab A1', wattage: 100, amortPerHour: 180, createdAt: Date.now() },
+        { id: uid(), name: 'Creality Ender 3 V2', wattage: 90, amortPerHour: 120, kWhPrice: 160, createdAt: Date.now() },
+        { id: uid(), name: 'Bambu Lab A1', wattage: 100, amortPerHour: 180, kWhPrice: 160, createdAt: Date.now() },
       );
     }
     if (store.inventory.length === 0) {
@@ -3664,6 +3667,7 @@ compute();
         { id: uid(), category: 'Filamento', tipo: 'PETG', name: 'PETG Voxelab Blanco', marca: 'Voxelab', color: '#f5f5f5', unidad: 'g', stock: 480, umbral: 200, pricePerUnit: 24, pricePerKg: 24000, proveedor: '', notas: '', createdAt: Date.now() },
       );
     }
+    try { localStorage.setItem(SEED_FLAG, '1'); } catch(e){}
   }
   loadLocal();
   seedDefaults();
