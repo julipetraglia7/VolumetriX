@@ -4560,14 +4560,20 @@ compute();
 
   // Modals contabilidad
   // Payment methods → días hasta liquidación (0 = inmediato/cobrado)
-  // fee = % que la plataforma se queda del monto bruto de la venta.
-  //   Tienda Nube ≈ tasa + cuotas + retenciones ≈ 7.05%
-  //   Mercado Pago ≈ cargo + uso de plataforma ≈ 6.30%
+  // fee = % que la plataforma se queda por transacción (base tasa+IVA).
+  //   Tienda Nube (Pago Nube): 4.21% — es la tasa base + IVA que aplica
+  //     SIEMPRE. Las cuotas (~2.73%) y retenciones (~0.21%) NO aparecen
+  //     por orden sino en el resumen mensual y solo en ciertos casos
+  //     (pagos en cuotas, condición fiscal), por eso no las contamos acá.
+  //   Mercado Pago (directo): 4.30% + IVA de cargo por transacción.
+  //     Si además vendés a través de un tercero (ej. tienda que usa MP
+  //     como procesador) se suma 2% de "uso de plataforma". Para el caso
+  //     típico de venta directa por MP mantenemos solo 4.30%.
   const PAY_METHODS = [
     { id: 'efectivo',      name: 'Efectivo',              days: 0,   fee: 0 },
     { id: 'transferencia', name: 'Transferencia',         days: 0,   fee: 0 },
-    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 7.05 },
-    { id: 'mercado_pago',  name: 'Mercado Pago',          days: 18,  fee: 6.30 },
+    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 4.22 },
+    { id: 'mercado_pago',  name: 'Mercado Pago',          days: 18,  fee: 4.30 },
     { id: 'otro',          name: 'Otro (definir manual)', days: null, fee: 0 },
   ];
   window.vxPayMethods = PAY_METHODS;
