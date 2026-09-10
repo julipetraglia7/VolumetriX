@@ -2489,6 +2489,11 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <span class="value" id="kpiGastos">$0</span>
           <span class="foot">Plata que salió</span>
         </div>
+        <div class="stat-tile" data-a="magenta" title="Comisiones automáticas de Tienda Nube (~7.05%) y Mercado Pago (~6.30%) sobre las ventas ya cobradas.">
+          <div class="top"><span class="label">Comisiones plataforma</span></div>
+          <span class="value" id="kpiComisPlat">$0</span>
+          <span class="foot">TN + MP se quedan</span>
+        </div>
         <div class="stat-tile" data-a="violet" title="Saldo inicial + ingresos cobrados − gastos.">
           <div class="top"><span class="label">Ganancia real</span></div>
           <span class="value" id="kpiBeneficio">$0</span>
@@ -4341,13 +4346,19 @@ compute();
   /* ================= CONTABILIDAD ================= */
   let cntTab = 'inicio';
 
+  function feeForSale(s){
+    const met = PAY_METHODS.find(m => m.id === s.metodoPago);
+    const feePct = (met && met.fee) || 0;
+    return (Number(s.monto) || 0) * (feePct / 100);
+  }
   function renderContabilidad(){
     autoReleaseSales();
     const cobrado = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + (Number(v.monto)||0), 0);
     const pendiente = store.sales.filter(s => s.cobrado === false).reduce((s, v) => s + (Number(v.monto)||0), 0);
+    const comisionesPlataforma = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + feeForSale(v), 0);
     const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto)||0), 0);
     const saldoInicial = Number(store.settings.saldoInicial) || 0;
-    const beneficio = saldoInicial + cobrado - gastos;
+    const beneficio = saldoInicial + cobrado - gastos - comisionesPlataforma;
     // Margen promedio: solo cuenta ventas asociadas a un proyecto con costo real (> 0)
     let totMargen = 0, cnt = 0;
     store.sales.forEach(s => {
@@ -4374,6 +4385,7 @@ compute();
     $('kpiCobrado').textContent = fmtMoney(cobrado);
     $('kpiPendiente').textContent = fmtMoney(pendiente);
     if ($('kpiGastos')) $('kpiGastos').textContent = fmtMoney(gastos);
+    if ($('kpiComisPlat')) $('kpiComisPlat').textContent = fmtMoney(comisionesPlataforma);
     $('kpiBeneficio').textContent = fmtMoney(beneficio);
     $('kpiMargen').textContent = cnt > 0 ? ((totMargen / cnt) * 100).toFixed(1) + '%' : '—';
     $('kpiPorHora').textContent = horasVendidas > 0 ? fmtMoney(cobrado / horasVendidas) : '—';
@@ -4414,7 +4426,7 @@ compute();
       const sales = [...store.sales].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
       if (sales.length === 0) { body.innerHTML = emptyStateHTML('Sin ventas', 'Presioná "Crear venta" para registrar la primera.', '💰', true); return; }
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Modo de pago</th><th>Estado</th><th>Se libera</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Modo de pago</th><th>Estado</th><th>Se libera</th><th style="text-align:right;">Monto</th><th style="text-align:right;">Comisión</th><th style="text-align:right;">Neto</th><th></th></tr></thead>
         <tbody>${sales.map(v => {
           let liqCell = '—';
           if (v.cobrado === false && v.fechaLiquidacion) {
@@ -4424,6 +4436,8 @@ compute();
           }
           const metLabel = v.metodoPagoLabel || (v.metodoPago ? v.metodoPago : (v.cobrado ? 'Efectivo' : '—'));
           const canRelease = v.cobrado === false && v.fechaLiquidacion && v.fechaLiquidacion <= new Date().toISOString().slice(0,10);
+          const comis = feeForSale(v);
+          const neto = (Number(v.monto) || 0) - comis;
           return `<tr>
             <td class="num">${esc(v.fecha || todayISO())}</td>
             <td>${esc(v.descripcion || '')}</td>
@@ -4431,6 +4445,8 @@ compute();
             <td>${v.cobrado === false ? `<span class="badge" style="background:rgba(255,214,10,.15); color:var(--accent-yellow);">${canRelease ? 'Liberada' : 'Pendiente'}</span>` : '<span class="badge badge-sold">Cobrado</span>'}</td>
             <td>${liqCell}</td>
             <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
+            <td class="num" style="text-align:right; color:${comis > 0 ? '#fca5a5' : 'var(--text-faint)'};">${comis > 0 ? '-' + fmtMoney(comis) : '—'}</td>
+            <td class="num" style="text-align:right; font-weight:600;">${fmtMoney(neto)}</td>
             <td style="text-align:right; white-space:nowrap;">
               ${v.cobrado === false ? `<button class="btn small" data-sale-cobrar="${esc(v.id)}">Marcar cobrada</button>` : ''}
               <button class="icon-btn" data-sale-edit="${esc(v.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -4501,12 +4517,15 @@ compute();
 
   // Modals contabilidad
   // Payment methods → días hasta liquidación (0 = inmediato/cobrado)
+  // fee = % que la plataforma se queda del monto bruto de la venta.
+  //   Tienda Nube ≈ tasa + cuotas + retenciones ≈ 7.05%
+  //   Mercado Pago ≈ cargo + uso de plataforma ≈ 6.30%
   const PAY_METHODS = [
-    { id: 'efectivo',      name: 'Efectivo',            days: 0 },
-    { id: 'transferencia', name: 'Transferencia',       days: 0 },
-    { id: 'tienda_nube',   name: 'Tienda Nube',         days: 14 },
-    { id: 'mercado_pago',  name: 'Mercado Pago',        days: 18 },
-    { id: 'otro',          name: 'Otro (definir manual)', days: null },
+    { id: 'efectivo',      name: 'Efectivo',              days: 0,   fee: 0 },
+    { id: 'transferencia', name: 'Transferencia',         days: 0,   fee: 0 },
+    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 7.05 },
+    { id: 'mercado_pago',  name: 'Mercado Pago',          days: 18,  fee: 6.30 },
+    { id: 'otro',          name: 'Otro (definir manual)', days: null, fee: 0 },
   ];
   window.vxPayMethods = PAY_METHODS;
 
@@ -4620,6 +4639,25 @@ compute();
       const wrap = $('vfLiqWrap');
       const hint = $('vfLiqHint');
       const liq = $('vfLiq');
+      // Estimación de comisión mostrada abajo del campo de monto
+      const monto = parseFloat($('vfMonto').value) || 0;
+      const fee = (met && met.fee) || 0;
+      const cost = monto * fee / 100;
+      // Cartel de comisión
+      let feeEl = document.getElementById('vfFeeHint');
+      const montoEl = $('vfMonto');
+      if (!feeEl && montoEl) {
+        feeEl = document.createElement('div');
+        feeEl.id = 'vfFeeHint';
+        feeEl.className = 'hint';
+        feeEl.style.cssText = 'font-size:11.5px; color:var(--text-muted); margin-top:4px;';
+        montoEl.closest('.field').appendChild(feeEl);
+      }
+      if (feeEl) {
+        feeEl.textContent = fee > 0 && monto > 0
+          ? `− ${fmtMoney(cost)} (${fee}% de ${met.name}) → neto ${fmtMoney(monto - cost)}`
+          : '';
+      }
       if (!met || met.days === 0) {
         wrap.style.display = 'none';
         liq.value = '';
@@ -4627,19 +4665,17 @@ compute();
       }
       wrap.style.display = '';
       if (met.days == null) {
-        // Otro — manual
         hint.textContent = 'Fecha manual (no calculada automáticamente).';
+        liq.removeAttribute('readonly');
       } else {
         liq.value = addDaysISO(fecha, met.days);
         liq.setAttribute('readonly', 'readonly');
         hint.textContent = `Auto-calculada: ${met.name} libera a los ${met.days} días de la compra.`;
       }
-      if (met.days == null) {
-        liq.removeAttribute('readonly');
-      }
     };
     $('vfMetodo').addEventListener('change', recalcLiq);
     $('vfFecha').addEventListener('change', recalcLiq);
+    $('vfMonto').addEventListener('input', recalcLiq);
     recalcLiq();
 
     $('vfSave').onclick = async () => {
