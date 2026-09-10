@@ -1448,13 +1448,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   width: 44px; height: 44px; font-size: 18px;
 }
 
-/* ===== 6-col stat grid responsive ===== */
-@media (max-width: 1100px) {
-  #cntKpis { grid-template-columns: repeat(3, 1fr) !important; }
-}
-@media (max-width: 600px) {
-  #cntKpis { grid-template-columns: repeat(2, 1fr) !important; }
-}
+/* ===== KPI grid auto-fit — no forced columns ===== */
 
 /* ===== Salud fiscal / pendientes rows ===== */
 .alert-row {
@@ -2478,8 +2472,8 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         </div>
       </div>
 
-      <!-- KPI grid (6 tiles) -->
-      <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);" id="cntKpis">
+      <!-- KPI grid (7 tiles) -->
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));" id="cntKpis">
         <div class="stat-tile" data-a="green" title="Suma de todas las ventas ya cobradas.">
           <div class="top"><span class="label">Ingresos cobrados</span></div>
           <span class="value" id="kpiCobrado">$0</span>
@@ -2489,6 +2483,11 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <div class="top"><span class="label">Pendiente de cobro</span></div>
           <span class="value" id="kpiPendiente">$0</span>
           <span class="foot">Ventas por liberarse</span>
+        </div>
+        <div class="stat-tile" data-a="orange" title="Suma de todos los gastos registrados.">
+          <div class="top"><span class="label">Gastos totales</span></div>
+          <span class="value" id="kpiGastos">$0</span>
+          <span class="foot">Plata que salió</span>
         </div>
         <div class="stat-tile" data-a="violet" title="Saldo inicial + ingresos cobrados − gastos.">
           <div class="top"><span class="label">Ganancia real</span></div>
@@ -4374,6 +4373,7 @@ compute();
 
     $('kpiCobrado').textContent = fmtMoney(cobrado);
     $('kpiPendiente').textContent = fmtMoney(pendiente);
+    if ($('kpiGastos')) $('kpiGastos').textContent = fmtMoney(gastos);
     $('kpiBeneficio').textContent = fmtMoney(beneficio);
     $('kpiMargen').textContent = cnt > 0 ? ((totMargen / cnt) * 100).toFixed(1) + '%' : '—';
     $('kpiPorHora').textContent = horasVendidas > 0 ? fmtMoney(cobrado / horasVendidas) : '—';
