@@ -1448,28 +1448,63 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   width: 44px; height: 44px; font-size: 18px;
 }
 
-/* ===== KPI grid auto-fit — no forced columns ===== */
+/* ===== KPI grid: 3 columnas × 2 filas ===== */
 #cntKpis {
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+@media (max-width: 900px) {
+  #cntKpis { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 500px) {
+  #cntKpis { grid-template-columns: 1fr !important; }
 }
 #cntKpis .stat-tile {
-  padding: 12px 14px;
+  padding: 14px 16px;
   min-width: 0;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease;
 }
+#cntKpis .stat-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 12px rgba(0,0,0,.35);
+}
+#cntKpis .stat-tile:active { transform: translateY(0); }
 #cntKpis .stat-tile .value {
-  font-size: 19px;
+  font-size: 22px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.02em;
 }
 #cntKpis .stat-tile .label {
-  font-size: 11px;
+  font-size: 11.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#cntKpis .stat-tile .foot { font-size: 10.5px; }
+#cntKpis .stat-tile .foot { font-size: 11px; }
+
+/* ===== Modal detalle de KPI ===== */
+.kpi-detail-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  word-break: break-all;
+  text-align: center;
+  padding: 18px 0;
+}
+.kpi-detail-formula {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 10px 4px 0;
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
+.kpi-detail-formula b { color: var(--text); font-family: 'JetBrains Mono', monospace; }
 
 /* ===== Salud fiscal / pendientes rows ===== */
 .alert-row {
@@ -2493,48 +2528,42 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         </div>
       </div>
 
-      <!-- KPI grid (7 tiles) -->
-      <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));" id="cntKpis">
-        <div class="stat-tile" data-a="green" title="Suma de todas las ventas ya cobradas.">
+      <!-- KPI grid (6 tiles: 3 arriba, 3 abajo. Click para ver detalle) -->
+      <div class="stat-grid vx-clickable" id="cntKpis">
+        <div class="stat-tile" data-a="green" data-kpi="cobrado" title="Suma de todas las ventas ya cobradas. Click para ver detalle.">
           <div class="top"><span class="label">Ingresos cobrados</span></div>
           <span class="value" id="kpiCobrado">$0</span>
           <span class="foot">Plata que ya entró</span>
         </div>
-        <div class="stat-tile" data-a="yellow" title="Ventas pendientes cuya fecha de liberación aún no llegó.">
+        <div class="stat-tile" data-a="yellow" data-kpi="pendiente" title="Ventas pendientes cuya fecha de liberación aún no llegó. Click para ver detalle.">
           <div class="top"><span class="label">Pendiente de cobro</span></div>
           <span class="value" id="kpiPendiente">$0</span>
           <span class="foot">Ventas por liberarse</span>
         </div>
-        <div class="stat-tile" data-a="orange" title="Suma de todos los gastos registrados.">
+        <div class="stat-tile" data-a="orange" data-kpi="gastos" title="Suma de todos los gastos registrados. Click para ver detalle.">
           <div class="top"><span class="label">Gastos totales</span></div>
           <span class="value" id="kpiGastos">$0</span>
           <span class="foot">Plata que salió</span>
         </div>
-        <div class="stat-tile" data-a="magenta" title="Comisiones automáticas de Tienda Nube (~7.05%) y Mercado Pago (~6.30%) sobre las ventas ya cobradas.">
+        <div class="stat-tile" data-a="magenta" data-kpi="comisiones" title="Comisiones automáticas de Tienda Nube (~7.05%) y Mercado Pago (~6.30%) sobre las ventas ya cobradas.">
           <div class="top"><span class="label">Comisiones plataforma</span></div>
           <span class="value" id="kpiComisPlat">$0</span>
           <span class="foot">TN + MP se quedan</span>
         </div>
-        <div class="stat-tile" data-a="violet" title="Saldo inicial + ingresos cobrados − gastos.">
+        <div class="stat-tile" data-a="violet" data-kpi="ganancia" title="Saldo inicial + ingresos cobrados − gastos − comisiones. Click para ver detalle.">
           <div class="top"><span class="label">Ganancia real</span></div>
           <span class="value" id="kpiBeneficio">$0</span>
           <span class="foot">Cobrado − gastos + saldo</span>
         </div>
-        <div class="stat-tile" data-a="magenta" title="Sobre ventas asociadas a un proyecto: (precio − costo del proyecto × cantidad) / precio.">
-          <div class="top"><span class="label">Margen promedio</span></div>
-          <span class="value" id="kpiMargen">—</span>
-          <span class="foot">% ganancia por venta</span>
-        </div>
-        <div class="stat-tile" data-a="orange" title="Ingresos cobrados dividido por horas totales de proyectos vendidos.">
-          <div class="top"><span class="label">$ por hora</span></div>
-          <span class="value" id="kpiPorHora">—</span>
-          <span class="foot">Cuánto ganás por hora</span>
-        </div>
-        <div class="stat-tile" data-a="cyan" title="Plata con la que arrancaste. Editá con el botón Saldo inicial.">
+        <div class="stat-tile" data-a="cyan" data-kpi="saldo" title="Plata con la que arrancaste.">
           <div class="top"><span class="label">Saldo inicial</span></div>
           <span class="value" id="kpiSaldo">$0</span>
-          <span class="foot">Editable ↑</span>
+          <span class="foot">Click para editar</span>
         </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+        <span class="badge" style="background:rgba(139,44,165,.18); color:var(--accent-violet); text-transform:none;">Margen promedio: <b id="kpiMargen" style="font-family:'JetBrains Mono',monospace;">—</b></span>
+        <span style="font-size:11px; color:var(--text-faint);">% ganancia por venta con proyecto vinculado</span>
       </div>
 
       <!-- Big action cards -->
@@ -4393,24 +4422,17 @@ compute();
       const monto = Number(s.monto) || 0;
       if (monto > 0) { totMargen += (monto - cost) / monto; cnt++; }
     });
-    // $/hora: cobrado dividido por horas totales de ventas con proyecto vinculado
-    let horasVendidas = 0;
-    store.sales.forEach(s => {
-      if (s.cobrado === false) return;
-      if (!s.proyectoId) return;
-      const proj = store.projects.find(p => p.id === s.proyectoId);
-      if (!proj) return;
-      horasVendidas += (Number(proj.tiempoTotal) || 0) * (Number(s.cantidadVendida) || 1);
-    });
 
     $('kpiCobrado').textContent = fmtMoney(cobrado);
     $('kpiPendiente').textContent = fmtMoney(pendiente);
     if ($('kpiGastos')) $('kpiGastos').textContent = fmtMoney(gastos);
     if ($('kpiComisPlat')) $('kpiComisPlat').textContent = fmtMoney(comisionesPlataforma);
     $('kpiBeneficio').textContent = fmtMoney(beneficio);
-    $('kpiMargen').textContent = cnt > 0 ? ((totMargen / cnt) * 100).toFixed(1) + '%' : '—';
-    $('kpiPorHora').textContent = horasVendidas > 0 ? fmtMoney(cobrado / horasVendidas) : '—';
+    if ($('kpiMargen')) $('kpiMargen').textContent = cnt > 0 ? ((totMargen / cnt) * 100).toFixed(1) + '%' : '—';
     $('kpiSaldo').textContent = fmtMoney(saldoInicial);
+
+    // Guardar valores para el modal detalle
+    window.vxKpiData = { cobrado, pendiente, gastos, comisionesPlataforma, beneficio, saldoInicial };
 
     renderContabilidadTab();
   }
@@ -4757,6 +4779,44 @@ compute();
       closeModal(); renderContabilidad(); toast('Presupuesto creado ✓');
     };
   };
+  // Click en un KPI → modal detalle
+  document.addEventListener('click', e => {
+    const tile = e.target.closest('#cntKpis .stat-tile[data-kpi]');
+    if (!tile) return;
+    openKpiDetail(tile.dataset.kpi);
+  });
+
+  function openKpiDetail(kpi){
+    const d = window.vxKpiData || {};
+    const map = {
+      cobrado: { title: 'Ingresos cobrados', color: '#6ee7a7', value: d.cobrado || 0, formula: 'Suma de todas las ventas ya cobradas (o auto-liberadas por fecha).' },
+      pendiente: { title: 'Pendiente de cobro', color: 'var(--accent-yellow)', value: d.pendiente || 0, formula: 'Suma de ventas cuyo modo de pago las difiere y aún no llegó su fecha de liberación.' },
+      gastos: { title: 'Gastos totales', color: 'var(--accent-orange)', value: d.gastos || 0, formula: 'Suma de todos los gastos registrados en la sección Gastos.' },
+      comisiones: { title: 'Comisiones plataforma', color: 'var(--accent-magenta)', value: d.comisionesPlataforma || 0, formula: 'Suma de comisiones por venta cobrada: <b>Tienda Nube 7.05%</b> · <b>Mercado Pago 6.30%</b>. Efectivo y Transferencia no descuentan.' },
+      ganancia: { title: 'Ganancia real', color: 'var(--accent-violet)', value: d.beneficio || 0, formula: `<b>${fmtMoney(d.saldoInicial||0)}</b> saldo + <b>${fmtMoney(d.cobrado||0)}</b> cobrado − <b>${fmtMoney(d.gastos||0)}</b> gastos − <b>${fmtMoney(d.comisionesPlataforma||0)}</b> comisiones = <b>${fmtMoney(d.beneficio||0)}</b>` },
+      saldo: { title: 'Saldo inicial', color: 'var(--accent-cyan)', value: d.saldoInicial || 0, formula: 'Plata con la que arrancaste. Podés editarla desde este mismo modal.' },
+    };
+    const m = map[kpi]; if (!m) return;
+    const editable = kpi === 'saldo';
+    openModal(`<h3 style="border-bottom:2px solid ${m.color}; padding-bottom:8px;">${esc(m.title)}</h3>
+      <div class="kpi-detail-value" style="color:${m.color};">${fmtMoney(m.value)}</div>
+      <div class="kpi-detail-formula">${m.formula}</div>
+      ${editable ? `<div class="field" style="margin-top:14px;"><label>Nuevo saldo inicial</label><input class="input num" type="number" step="0.01" id="kpiSaldoEdit" value="${Number(d.saldoInicial)||0}"></div>` : ''}
+      <div class="modal-actions">
+        ${editable ? '<button class="btn primary" id="kpiSaldoSave">Guardar</button>' : ''}
+        <button class="btn ghost" data-close>Cerrar</button>
+      </div>`);
+    if (editable) {
+      $('kpiSaldoSave').onclick = async () => {
+        const val = parseFloat($('kpiSaldoEdit').value);
+        if (!isFinite(val)) return;
+        store.settings.saldoInicial = val; saveLocal();
+        if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('settings', 'app', store.settings); } catch(e){} }
+        closeModal(); renderContabilidad(); toast('Saldo actualizado ✓');
+      };
+    }
+  }
+
   $('cntSaldoInit').onclick = () => {
     const val = prompt('Saldo inicial (ARS):', String(store.settings.saldoInicial || 0));
     if (val == null) return;
