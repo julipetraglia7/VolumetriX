@@ -1449,6 +1449,27 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 }
 
 /* ===== KPI grid auto-fit — no forced columns ===== */
+#cntKpis {
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+}
+#cntKpis .stat-tile {
+  padding: 12px 14px;
+  min-width: 0;
+}
+#cntKpis .stat-tile .value {
+  font-size: 19px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.02em;
+}
+#cntKpis .stat-tile .label {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#cntKpis .stat-tile .foot { font-size: 10.5px; }
 
 /* ===== Salud fiscal / pendientes rows ===== */
 .alert-row {
