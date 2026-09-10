@@ -1483,6 +1483,18 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 .alert-row.ok { border-left-color: #4ade80; }
 .alert-row.ok .ic { color: #6ee7a7; }
 
+/* ===== Resultados internos compactos ===== */
+#view-calc .results .res-final { padding: 12px 14px; }
+#view-calc .results .res-final .value { font-size: 18px; }
+#view-calc .results .res-final .label { font-size: 10.5px; }
+#view-calc .results .price-cards { gap: 10px; }
+#view-calc .results .ganancia-box { padding: 12px 14px; margin: 0; }
+#view-calc .results .ganancia-box .gan-value { font-size: 18px; }
+#view-calc .results .gan-card { padding: 10px 12px; }
+#view-calc .results .res-tiempo { padding: 10px 12px; margin: 0; }
+#view-calc .results .donut { width: 140px; height: 140px; }
+#view-calc .results .donut-wrap { grid-template-columns: 140px 1fr; gap: 16px; margin-top: 8px; }
+
 /* ===== Calculadora compacta — layout de 2 columnas ===== */
 #view-calc .wrap { padding: 0; }
 #view-calc .wrap > .card {
@@ -5077,15 +5089,22 @@ compute();
     addCol(cardPerfilImp);
     // Row 3: Piezas (span 2)
     addSpan(cardPiezas);
-    // Row 4: Extras (izq) | Ganancia+Comisiones stacked (der)
+    // Row 4: Extras (izq) | Ganancia (con Comisiones adentro) (der)
     if (cardExtras) grid.appendChild(cardExtras);
-    // Right stack: crear un wrapper con Ganancia y Comisiones
-    if (cardGanancia || cardComis) {
-      const stack = document.createElement('div');
-      stack.style.cssText = 'display:flex; flex-direction:column; gap:14px;';
-      if (cardGanancia) stack.appendChild(cardGanancia);
-      if (cardComis) stack.appendChild(cardComis);
-      grid.appendChild(stack);
+    if (cardGanancia) {
+      // Merge Comisiones dentro de Ganancia como sub-sección
+      if (cardComis) {
+        const comisContent = cardComis.querySelector('.field');
+        if (comisContent) {
+          const divider = document.createElement('div');
+          divider.style.cssText = 'margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); font-weight: 600; display:flex; align-items:center; gap:6px;';
+          divider.innerHTML = '<span style="color:var(--accent-orange);">%</span> Comisiones externas';
+          cardGanancia.appendChild(divider);
+          cardGanancia.appendChild(comisContent);
+        }
+        cardComis.remove();
+      }
+      grid.appendChild(cardGanancia);
     }
     // Row 5: Resultados (span 2 con layout interno)
     addSpan(cardResults);
@@ -5150,9 +5169,9 @@ compute();
     // Clear results content (keep h2)
     Array.from(results.children).forEach(c => { if (c !== h2) c.remove(); });
 
-    // Create 2-col grid inside results
+    // Create 2-col grid inside results (left wider than right so el gráfico termina donde Total Costos)
     const inner = document.createElement('div');
-    inner.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;';
+    inner.style.cssText = 'display:grid; grid-template-columns:1.15fr 1fr; gap:24px; align-items:start;';
     // Left col
     const left = document.createElement('div');
     left.style.cssText = 'display:flex; flex-direction:column; gap:16px;';
