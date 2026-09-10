@@ -5599,7 +5599,7 @@ compute();
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs }
   from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
@@ -5633,18 +5633,54 @@ function setStatus(msg, isError) {
   if (lbl && !isError) lbl.textContent = 'Sincronizado';
 }
 
-const btnLogin = $('btnLogin');
-if (btnLogin) btnLogin.onclick = async () => {
+async function doSignIn() {
   try {
-    await signInWithPopup(auth, provider);
+    // Chequear si venimos de un redirect previo
+    const res = await getRedirectResult(auth).catch(() => null);
+    if (res && res.user) return;
+    // Intentar popup
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (popupErr) {
+      // Chrome/Safari a veces bloquean el popup con "popup-blocked",
+      // "popup-closed-by-user" o "operation-not-supported-in-this-environment".
+      // Fallback: redirect completo
+      const code = popupErr && popupErr.code;
+      const shouldRedirect = ['auth/popup-blocked','auth/popup-closed-by-user','auth/operation-not-supported-in-this-environment','auth/cancelled-popup-request'].includes(code) || String(popupErr && popupErr.message || '').toLowerCase().includes('popup');
+      if (shouldRedirect) {
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw popupErr;
+      }
+    }
   } catch (e) {
-    console.error(e);
-    alert('No se pudo iniciar sesión: ' + (e.message || e.code));
+    console.error('[VolumetriX auth]', e);
+    alert('No se pudo iniciar sesión: ' + (e && (e.message || e.code) || 'error desconocido'));
   }
-};
+}
 
-const btnLogout = $('btnLogout');
-if (btnLogout) btnLogout.onclick = () => signOut(auth);
+async function doSignOut() {
+  try { await signOut(auth); }
+  catch (e) { console.error('[VolumetriX auth]', e); }
+}
+
+// Chequear resultado de redirect al arrancar (Chrome/Safari sin popup)
+getRedirectResult(auth).catch(err => {
+  if (err && err.code && err.code !== 'auth/no-redirect-result') console.warn('[VolumetriX auth]', err);
+});
+
+// Enlazar handlers a TODOS los botones de login visibles.
+// Antes se hacía por .click() proxy sobre #btnLogin, pero eso fallaba si el módulo
+// se cargaba después de que el usuario tocaba el botón, o si el proxy estaba
+// oculto (display:none) en Chrome.
+['btnLogin','sideLoginBtn','btnLoginGate'].forEach(id => {
+  const el = $(id);
+  if (el) { el.onclick = doSignIn; el.disabled = false; }
+});
+['btnLogout','sideLogout'].forEach(id => {
+  const el = $(id);
+  if (el) el.onclick = doSignOut;
+});
 
 const COLLECTIONS = ['projects', 'inventory', 'printers', 'providers', 'sales', 'expenses', 'presupuestos', 'boards', 'events', 'settings'];
 
