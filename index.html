@@ -4173,9 +4173,16 @@ compute();
               : `<div style="font-size:13px;">${presPendientes} presupuesto${presPendientes>1?'s':''} esperando respuesta.</div>`}
           </div>
           <div class="card"><h2 style="margin:0 0 12px; font-size:14.5px;">💰 Ventas sin cobrar</h2>
-            ${ventasSinCobrar === 0
-              ? '<div style="color:#6ee7a7; font-size:13px;">✓ Todas las ventas cobradas</div>'
-              : `<div style="font-size:13px;">${ventasSinCobrar} venta${ventasSinCobrar>1?'s':''} pendiente${ventasSinCobrar>1?'s':''} de cobro.</div>`}
+            ${(() => {
+              const pend = store.sales.filter(s => s.cobrado === false);
+              if (pend.length === 0) return '<div style="color:#6ee7a7; font-size:13px;">✓ Todas las ventas cobradas</div>';
+              const today = todayISO();
+              const vencidas = pend.filter(s => s.fechaLiquidacion && s.fechaLiquidacion < today);
+              const proxima = [...pend].filter(s => s.fechaLiquidacion).sort((a,b) => a.fechaLiquidacion.localeCompare(b.fechaLiquidacion))[0];
+              return `<div style="font-size:13px;">${pend.length} venta${pend.length>1?'s':''} pendiente${pend.length>1?'s':''} de cobro.</div>
+                ${vencidas.length > 0 ? `<div style="font-size:12px; color:#fca5a5; margin-top:6px;">⚠ ${vencidas.length} ya vencida${vencidas.length>1?'s':''}</div>` : ''}
+                ${proxima && proxima.fechaLiquidacion >= today ? `<div style="font-size:12px; color:var(--text-muted); margin-top:6px;">Próximo cobro: ${esc(proxima.fechaLiquidacion)}</div>` : ''}`;
+            })()}
           </div>
         </div>`;
       return;
@@ -4184,17 +4191,26 @@ compute();
       const sales = [...store.sales].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
       if (sales.length === 0) { body.innerHTML = emptyStateHTML('Sin ventas', 'Presioná "Crear venta" para registrar la primera.', '💰', true); return; }
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Estado</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
-        <tbody>${sales.map(v => `<tr>
-          <td class="num">${esc(v.fecha || todayISO())}</td>
-          <td>${esc(v.descripcion || '')}</td>
-          <td>${v.cobrado === false ? '<span class="badge badge-draft">Pendiente</span>' : '<span class="badge badge-sold">Cobrado</span>'}</td>
-          <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
-          <td style="text-align:right; white-space:nowrap;">
-            ${v.cobrado === false ? `<button class="btn small" data-sale-cobrar="${esc(v.id)}">Marcar cobrada</button>` : ''}
-            <button class="icon-btn danger" data-sale-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
-          </td>
-        </tr>`).join('')}</tbody></table></div>`;
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Estado</th><th>Cobro estimado</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <tbody>${sales.map(v => {
+          let liqCell = '—';
+          if (v.cobrado === false && v.fechaLiquidacion) {
+            const today = new Date().toISOString().slice(0,10);
+            const late = v.fechaLiquidacion < today;
+            liqCell = `<span style="color:${late ? '#fca5a5' : 'var(--text-muted)'}; font-family:'JetBrains Mono',monospace;">${esc(v.fechaLiquidacion)}${late ? ' ⚠' : ''}</span>`;
+          }
+          return `<tr>
+            <td class="num">${esc(v.fecha || todayISO())}</td>
+            <td>${esc(v.descripcion || '')}</td>
+            <td>${v.cobrado === false ? '<span class="badge" style="background:rgba(255,214,10,.15); color:var(--accent-yellow);">Pendiente</span>' : '<span class="badge badge-sold">Cobrado</span>'}</td>
+            <td>${liqCell}</td>
+            <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
+            <td style="text-align:right; white-space:nowrap;">
+              ${v.cobrado === false ? `<button class="btn small" data-sale-cobrar="${esc(v.id)}">Marcar cobrada</button>` : ''}
+              <button class="icon-btn danger" data-sale-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-sale-del]').forEach(b => b.onclick = e => deleteFin('sales', e.currentTarget.dataset.saleDel));
       body.querySelectorAll('[data-sale-cobrar]').forEach(b => b.onclick = async e => {
         const id = e.currentTarget.dataset.saleCobrar;
@@ -4264,6 +4280,7 @@ compute();
           <button data-st="pendiente">Pendiente</button>
         </div>
       </div>
+      <div class="field" id="vfLiqWrap" style="display:none;"><label>💰 Fecha estimada de cobro</label><input class="input" type="date" id="vfLiq" value=""></div>
       <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="vfSave">Añadir venta</button></div>`;
   }
   function gastoForm(existing){
@@ -4312,10 +4329,29 @@ compute();
   }
   $('baVenta').onclick = () => {
     openModal(ventaForm());
-    wireSegPick();
+    // Custom wiring: show liquidation date only when Pendiente
+    document.querySelectorAll('.seg-pick button[data-st]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.seg-pick button[data-st]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      $('vfLiqWrap').style.display = b.dataset.st === 'pendiente' ? '' : 'none';
+      if (b.dataset.st === 'pendiente' && !$('vfLiq').value) {
+        // Default: 30 days from today
+        const d = new Date(); d.setDate(d.getDate() + 30);
+        $('vfLiq').value = d.toISOString().slice(0,10);
+      }
+    });
     $('vfSave').onclick = async () => {
       const st = document.querySelector('.seg-pick button[data-st].on');
-      const data = { id: uid(), fecha: $('vfFecha').value || todayISO(), descripcion: $('vfDesc').value, monto: parseFloat($('vfMonto').value) || 0, cobrado: st ? st.dataset.st === 'cobrado' : true, createdAt: Date.now() };
+      const cobrado = st ? st.dataset.st === 'cobrado' : true;
+      const data = {
+        id: uid(),
+        fecha: $('vfFecha').value || todayISO(),
+        descripcion: $('vfDesc').value,
+        monto: parseFloat($('vfMonto').value) || 0,
+        cobrado,
+        fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
+        createdAt: Date.now(),
+      };
       store.sales.push(data); saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', data.id, data); } catch(e){} }
       closeModal(); renderContabilidad(); renderDashboard(); toast('Venta añadida ✓');
@@ -4452,7 +4488,10 @@ compute();
         (events[day] = events[day] || []).push(type);
       }
     };
-    store.sales.forEach(s => add(s.fecha, 'sale'));
+    store.sales.forEach(s => {
+      add(s.fecha, 'sale');
+      if (s.cobrado === false && s.fechaLiquidacion) add(s.fechaLiquidacion, 'pres');
+    });
     store.expenses.forEach(e => add(e.fecha, 'exp'));
     store.presupuestos.forEach(p => add(p.fecha, 'pres'));
     store.events.forEach(e => add(e.fecha, 'event'));
