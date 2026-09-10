@@ -4394,11 +4394,13 @@ compute();
             <td class="num" style="text-align:right; color:#6ee7a7;">${fmtMoney(v.monto)}</td>
             <td style="text-align:right; white-space:nowrap;">
               ${v.cobrado === false ? `<button class="btn small" data-sale-cobrar="${esc(v.id)}">Marcar cobrada</button>` : ''}
-              <button class="icon-btn danger" data-sale-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+              <button class="icon-btn" data-sale-edit="${esc(v.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+              <button class="icon-btn danger" data-sale-del="${esc(v.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
             </td>
           </tr>`;
         }).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-sale-del]').forEach(b => b.onclick = e => deleteFin('sales', e.currentTarget.dataset.saleDel));
+      body.querySelectorAll('[data-sale-edit]').forEach(b => b.onclick = e => editSale(e.currentTarget.dataset.saleEdit));
       body.querySelectorAll('[data-sale-cobrar]').forEach(b => b.onclick = async e => {
         const id = e.currentTarget.dataset.saleCobrar;
         const s = store.sales.find(x => x.id === id); if (!s) return;
@@ -4419,9 +4421,13 @@ compute();
           <td>${esc(v.descripcion || '')}</td>
           <td>${esc(v.categoria || 'Otros')}</td>
           <td class="num" style="text-align:right; color:#fca5a5;">${fmtMoney(v.monto)}</td>
-          <td style="text-align:right;"><button class="icon-btn danger" data-exp-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
+          <td style="text-align:right; white-space:nowrap;">
+            <button class="icon-btn" data-exp-edit="${esc(v.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="icon-btn danger" data-exp-del="${esc(v.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+          </td>
         </tr>`).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-exp-del]').forEach(b => b.onclick = e => deleteFin('expenses', e.currentTarget.dataset.expDel));
+      body.querySelectorAll('[data-exp-edit]').forEach(b => b.onclick = e => editExpense(e.currentTarget.dataset.expEdit));
       return;
     }
     if (cntTab === 'presupuestos') {
@@ -4437,12 +4443,14 @@ compute();
           <td class="num" style="text-align:right;">${fmtMoney(v.monto)}</td>
           <td style="text-align:right; white-space:nowrap;">
             ${v.estado === 'pendiente' ? `<button class="btn small" data-pres-acc="${esc(v.id)}">✓</button><button class="btn small" data-pres-rej="${esc(v.id)}">✗</button>` : ''}
-            <button class="icon-btn danger" data-pres-del="${esc(v.id)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+            <button class="icon-btn" data-pres-edit="${esc(v.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="icon-btn danger" data-pres-del="${esc(v.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </td>
         </tr>`).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-pres-acc]').forEach(b => b.onclick = e => updatePresupuestoEstado(e.currentTarget.dataset.presAcc, 'aceptado'));
       body.querySelectorAll('[data-pres-rej]').forEach(b => b.onclick = e => updatePresupuestoEstado(e.currentTarget.dataset.presRej, 'rechazado'));
       body.querySelectorAll('[data-pres-del]').forEach(b => b.onclick = e => deletePresupuesto(e.currentTarget.dataset.presDel));
+      body.querySelectorAll('[data-pres-edit]').forEach(b => b.onclick = e => editPresupuesto(e.currentTarget.dataset.presEdit));
     }
   }
   $('cntTabs').addEventListener('click', e => {
@@ -4680,6 +4688,93 @@ compute();
     renderContabilidad();
   }
   $('btnNuevaVentaHero').onclick = () => { showView('contabilidad'); setTimeout(() => $('baVenta').click(), 100); };
+
+  // ============ Editar venta / gasto / presupuesto ============
+  function editSale(id){
+    const v = store.sales.find(x => x.id === id);
+    if (!v) return;
+    openModal(ventaForm(), true);
+    // Prefill fields
+    const projSel = $('vfProy'); if (projSel) projSel.value = v.proyectoId || '';
+    $('vfCantidad').value = v.cantidadVendida || 1;
+    $('vfFecha').value = v.fecha || todayISO();
+    $('vfMonto').value = v.monto || 0;
+    $('vfDesc').value = v.descripcion || '';
+    $('vfMetodo').value = v.metodoPago || 'efectivo';
+    if (v.fechaLiquidacion) { const wrap = $('vfLiqWrap'); if (wrap) { wrap.style.display = ''; $('vfLiq').value = v.fechaLiquidacion; } }
+    // Wire same recalc logic
+    const recalcLiq = () => {
+      const met = PAY_METHODS.find(m => m.id === $('vfMetodo').value);
+      const wrap = $('vfLiqWrap'), hint = $('vfLiqHint'), liq = $('vfLiq');
+      if (!met || met.days === 0) { wrap.style.display = 'none'; liq.value = ''; return; }
+      wrap.style.display = '';
+      if (met.days == null) { hint.textContent = 'Fecha manual.'; liq.removeAttribute('readonly'); }
+      else { liq.value = addDaysISO($('vfFecha').value, met.days); liq.setAttribute('readonly','readonly'); hint.textContent = `${met.name} libera a los ${met.days} días.`; }
+    };
+    $('vfMetodo').addEventListener('change', recalcLiq);
+    $('vfFecha').addEventListener('change', recalcLiq);
+    $('vfSave').textContent = 'Guardar cambios';
+    $('vfSave').onclick = async () => {
+      const met = PAY_METHODS.find(m => m.id === $('vfMetodo').value);
+      const cobrado = met && met.days === 0 ? true : v.cobrado;
+      Object.assign(v, {
+        proyectoId: $('vfProy').value,
+        cantidadVendida: Math.max(1, parseInt($('vfCantidad').value) || 1),
+        fecha: $('vfFecha').value || todayISO(),
+        descripcion: $('vfDesc').value,
+        monto: parseFloat($('vfMonto').value) || 0,
+        metodoPago: $('vfMetodo').value,
+        metodoPagoLabel: met ? met.name : '',
+        cobrado,
+        fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
+      });
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', v.id, v); } catch(e){} }
+      closeModal(); renderContabilidad(); renderDashboard(); toast('Venta actualizada ✓');
+    };
+  }
+
+  function editExpense(id){
+    const g = store.expenses.find(x => x.id === id);
+    if (!g) return;
+    openModal(gastoForm(g), true);
+    $('gfSave').textContent = 'Guardar cambios';
+    $('gfSave').onclick = async () => {
+      Object.assign(g, {
+        fecha: $('gfFecha').value || todayISO(),
+        descripcion: $('gfDesc').value,
+        categoria: $('gfCat').value,
+        monto: parseFloat($('gfMonto').value) || 0,
+        proveedor: $('gfProv').value,
+        notas: $('gfNotas').value.trim(),
+      });
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('expenses', g.id, g); } catch(e){} }
+      closeModal(); renderContabilidad(); renderDashboard(); toast('Gasto actualizado ✓');
+    };
+  }
+
+  function editPresupuesto(id){
+    const p = store.presupuestos.find(x => x.id === id);
+    if (!p) return;
+    openModal(presupuestoForm());
+    $('ptFecha').value = p.fecha || todayISO();
+    $('ptMonto').value = p.monto || 0;
+    $('ptCliente').value = p.cliente || '';
+    $('ptDesc').value = p.descripcion || '';
+    $('ptSave').textContent = 'Guardar cambios';
+    $('ptSave').onclick = async () => {
+      Object.assign(p, {
+        fecha: $('ptFecha').value || todayISO(),
+        cliente: $('ptCliente').value,
+        descripcion: $('ptDesc').value,
+        monto: parseFloat($('ptMonto').value) || 0,
+      });
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('presupuestos', p.id, p); } catch(e){} }
+      closeModal(); renderContabilidad(); toast('Presupuesto actualizado ✓');
+    };
+  }
 
   /* ================= BOM (Materiales del proyecto) =================
      Estructura:
