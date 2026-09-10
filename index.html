@@ -1483,6 +1483,35 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 .alert-row.ok { border-left-color: #4ade80; }
 .alert-row.ok .ic { color: #6ee7a7; }
 
+/* ===== Calculadora compacta — layout de 2 columnas ===== */
+#view-calc .wrap { padding: 0; }
+#view-calc .wrap > .card {
+  margin-bottom: 0 !important;
+}
+.calc-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .calc-grid-2col { grid-template-columns: 1fr; }
+}
+.calc-grid-2col > .card,
+.calc-grid-2col > .results { margin: 0 !important; }
+.calc-grid-2col > .vx-span-2 { grid-column: 1 / -1; }
+
+/* Ocultar filas de campos de filamento legacy tras vincular al inventario */
+#view-calc .vx-hide-fil-legacy .filament > .grid { display: none !important; }
+#view-calc .vx-hide-fil-legacy .filament > .grid.g3 { display: grid !important; grid-template-columns: 1fr !important; }
+#view-calc .vx-hide-fil-legacy .filament > .grid.g3 > .field:not(.fil-gramos-wrap) { display: none !important; }
+#view-calc .vx-hide-fil-legacy .filament > .grid.g3 > .field.fil-gramos-wrap { display: flex !important; }
+
+/* Compactar cards */
+#view-calc .card { padding: 14px 16px; }
+#view-calc .card h2 { font-size: 15px; margin-bottom: 10px; }
+#view-calc .grid { gap: 8px 10px; }
+
 /* ===== Organización ===== */
 .org-stats {
   display: grid;
@@ -4903,6 +4932,7 @@ compute();
   // MutationObserver: when legacy renderPieces re-renders, re-enhance
   const piecesObserver = new MutationObserver(() => {
     enhancePieces();
+    hideFilamentLegacyFields();
   });
   function attachPiecesObserver(){
     const c = document.getElementById('piecesContainer');
@@ -4912,10 +4942,117 @@ compute();
     }
   }
 
+  // ============ Impresora picker desde inventario ============
+  function enhancePrinterPicker(){
+    const modelSel = document.getElementById('modeloImpresora');
+    if (!modelSel || modelSel._vxDone) return;
+    modelSel._vxDone = true;
+    // Inyectar dropdown de impresoras del inventario arriba de "Modelo"
+    const parentField = modelSel.closest('.field');
+    if (!parentField) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.style.cssText = 'margin-bottom: 10px; padding: 10px; background: rgba(139,44,165,.08); border: 1px solid rgba(139,44,165,.28); border-radius: 8px;';
+    wrap.innerHTML = `
+      <label style="font-size:11.5px; color:var(--accent-magenta); font-weight:600; letter-spacing:.05em; display:flex; align-items:center; gap:6px; margin-bottom:6px;">🎯 Elegir impresora del inventario</label>
+      <select class="input" id="vxPrinterPicker">
+        <option value="">— Elegir de tus impresoras —</option>
+        ${store.printers.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${p.wattage||0}W · amort. ${fmtMoney(p.amortPerHour||0)}/h</option>`).join('')}
+      </select>
+    `;
+    parentField.parentElement.insertBefore(wrap, parentField);
+    document.getElementById('vxPrinterPicker').addEventListener('change', e => {
+      const p = store.printers.find(x => x.id === e.target.value);
+      if (!p) return;
+      // Auto-fill legacy fields
+      const consumo = document.getElementById('consumoW');
+      if (consumo) { consumo.value = p.wattage || 0; consumo.dispatchEvent(new Event('input', { bubbles: true })); }
+      // Precio de repuestos → usamos amortización × 5000 horas para estimar? Mejor dejar lo que ya está.
+      // Solo sobrescribimos si el usuario carga precio de repuestos = amort × 5000 (aprox 5 años de vida)
+      const rep = document.getElementById('precioRepuestos');
+      if (rep && p.amortPerHour) { rep.value = Math.round((p.amortPerHour || 0) * 5000); rep.dispatchEvent(new Event('input', { bubbles: true })); }
+      const hd = document.getElementById('horasDesgaste');
+      if (hd) { hd.value = 5000; hd.dispatchEvent(new Event('input', { bubbles: true })); }
+      // Reset el modelo legacy a personalizado
+      modelSel.value = 'custom';
+      toast('Impresora cargada ✓');
+    });
+  }
+
+  // ============ Ocultar campos legacy dentro de cada filamento ============
+  function hideFilamentLegacyFields(){
+    document.querySelectorAll('#view-calc .filament').forEach(fil => {
+      // Encontrar los rows internos
+      const rows = fil.querySelectorAll(':scope > .grid');
+      rows.forEach(row => {
+        // Ocultar los que contienen marca/color/precio/fecha
+        const isFilamentLegacy = row.querySelector('.fil-marca, .fil-precio, .fil-fecha, .fil-color');
+        const hasGramos = row.querySelector('.fil-gramos');
+        if (isFilamentLegacy && !hasGramos) {
+          row.style.display = 'none';
+        } else if (hasGramos) {
+          // Este row tiene precio + fecha + gramos. Ocultar los que NO son gramos
+          row.querySelectorAll(':scope > .field').forEach(f => {
+            if (!f.querySelector('.fil-gramos')) f.style.display = 'none';
+          });
+          row.style.gridTemplateColumns = '1fr';
+        }
+      });
+    });
+  }
+
+  // ============ Ocultar Producción del Pedido ============
+  function hideProduccionSection(){
+    const cant = document.getElementById('cantidadUnidades');
+    if (!cant) return;
+    const card = cant.closest('.card');
+    if (card && !card._vxHidden) {
+      card._vxHidden = true;
+      card.style.display = 'none';
+      // Forzar cantidad = 1 y disenioUnaVez = true
+      cant.value = 1; cant.dispatchEvent(new Event('input', { bubbles: true }));
+      const chk = document.getElementById('disenioUnaVez');
+      if (chk && !chk.checked) { chk.checked = true; chk.dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+  }
+
+  // ============ Layout 2 columnas ============
+  function apply2ColLayout(){
+    const wrap = document.querySelector('#view-calc .wrap');
+    if (!wrap || wrap._vx2col) return;
+    wrap._vx2col = true;
+    // Wrap children in a grid container
+    const cards = Array.from(wrap.children).filter(el => el.tagName === 'SECTION' || el.classList.contains('card') || el.classList.contains('results'));
+    const grid = document.createElement('div');
+    grid.className = 'calc-grid-2col';
+    wrap.appendChild(grid);
+    cards.forEach(c => grid.appendChild(c));
+    // Mark wide cards to span 2 cols: Piezas del Proyecto y Results
+    grid.querySelectorAll('section, .results').forEach(c => {
+      const h2 = c.querySelector('h2');
+      const txt = (h2?.textContent || '').toLowerCase();
+      if (txt.includes('piezas') || c.classList.contains('results') || c.tagName === 'SECTION' && c.querySelector('.results')) {
+        c.classList.add('vx-span-2');
+      }
+    });
+    // Results always spans 2
+    document.querySelectorAll('#view-calc .results').forEach(r => r.classList.add('vx-span-2'));
+    document.querySelectorAll('#view-calc section').forEach(s => {
+      const h = s.querySelector('h2');
+      if (h && /piezas/i.test(h.textContent)) s.classList.add('vx-span-2');
+    });
+  }
+
   function enhanceCalcView(){
     attachPiecesObserver();
     enhancePieces();
     enhanceExtras();
+    enhancePrinterPicker();
+    hideFilamentLegacyFields();
+    hideProduccionSection();
+    apply2ColLayout();
+    // Re-hide filament legacy on piece re-render
+    setTimeout(hideFilamentLegacyFields, 100);
   }
   window.vxEnhanceCalc = enhanceCalcView;
 
