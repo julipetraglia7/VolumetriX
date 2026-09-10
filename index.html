@@ -2480,29 +2480,35 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 
       <!-- KPI grid (6 tiles) -->
       <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);" id="cntKpis">
-        <div class="stat-tile" data-a="green">
+        <div class="stat-tile" data-a="green" title="Suma de todas las ventas ya cobradas.">
           <div class="top"><span class="label">Ingresos cobrados</span></div>
           <span class="value" id="kpiCobrado">$0</span>
+          <span class="foot">Plata que ya entró</span>
         </div>
-        <div class="stat-tile" data-a="yellow">
+        <div class="stat-tile" data-a="yellow" title="Ventas pendientes cuya fecha de liberación aún no llegó.">
           <div class="top"><span class="label">Pendiente de cobro</span></div>
           <span class="value" id="kpiPendiente">$0</span>
+          <span class="foot">Ventas por liberarse</span>
         </div>
-        <div class="stat-tile" data-a="violet">
-          <div class="top"><span class="label">Beneficio neto</span></div>
+        <div class="stat-tile" data-a="violet" title="Saldo inicial + ingresos cobrados − gastos.">
+          <div class="top"><span class="label">Ganancia real</span></div>
           <span class="value" id="kpiBeneficio">$0</span>
+          <span class="foot">Cobrado − gastos + saldo</span>
         </div>
-        <div class="stat-tile" data-a="magenta">
+        <div class="stat-tile" data-a="magenta" title="Sobre ventas asociadas a un proyecto: (precio − costo del proyecto × cantidad) / precio.">
           <div class="top"><span class="label">Margen promedio</span></div>
-          <span class="value" id="kpiMargen">0%</span>
+          <span class="value" id="kpiMargen">—</span>
+          <span class="foot">% ganancia por venta</span>
         </div>
-        <div class="stat-tile" data-a="orange">
-          <div class="top"><span class="label">$/hora</span></div>
-          <span class="value" id="kpiPorHora">$0</span>
+        <div class="stat-tile" data-a="orange" title="Ingresos cobrados dividido por horas totales de proyectos vendidos.">
+          <div class="top"><span class="label">$ por hora</span></div>
+          <span class="value" id="kpiPorHora">—</span>
+          <span class="foot">Cuánto ganás por hora</span>
         </div>
-        <div class="stat-tile" data-a="cyan">
+        <div class="stat-tile" data-a="cyan" title="Plata con la que arrancaste. Editá con el botón Saldo inicial.">
           <div class="top"><span class="label">Saldo inicial</span></div>
           <span class="value" id="kpiSaldo">$0</span>
+          <span class="foot">Editable ↑</span>
         </div>
       </div>
 
@@ -4343,25 +4349,34 @@ compute();
     const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto)||0), 0);
     const saldoInicial = Number(store.settings.saldoInicial) || 0;
     const beneficio = saldoInicial + cobrado - gastos;
-    // Margen promedio: sobre ventas cobradas, usando totalCostos de proyectos vinculados si existen, sino asumir cost=0
+    // Margen promedio: solo cuenta ventas asociadas a un proyecto con costo real (> 0)
     let totMargen = 0, cnt = 0;
     store.sales.forEach(s => {
       if (s.cobrado === false) return;
-      const proj = s.proyectoId ? store.projects.find(p => p.id === s.proyectoId) : null;
-      const cost = proj ? (proj.totalCostos * (proj.cantidad || 1)) : 0;
+      if (!s.proyectoId) return;
+      const proj = store.projects.find(p => p.id === s.proyectoId);
+      if (!proj) return;
+      const cantVend = Number(s.cantidadVendida) || 1;
+      const cost = (Number(proj.totalCostos) || 0) * cantVend;
+      if (cost <= 0) return;
       const monto = Number(s.monto) || 0;
       if (monto > 0) { totMargen += (monto - cost) / monto; cnt++; }
     });
-    const margenProm = cnt > 0 ? (totMargen / cnt) * 100 : 0;
-    // $/hora: cobrado / horas totales de proyectos vendidos
-    const horasVendidas = store.projects.filter(p => p.estado === 'vendido').reduce((s, p) => s + (Number(p.tiempoTotal) || 0), 0);
-    const porHora = horasVendidas > 0 ? cobrado / horasVendidas : 0;
+    // $/hora: cobrado dividido por horas totales de ventas con proyecto vinculado
+    let horasVendidas = 0;
+    store.sales.forEach(s => {
+      if (s.cobrado === false) return;
+      if (!s.proyectoId) return;
+      const proj = store.projects.find(p => p.id === s.proyectoId);
+      if (!proj) return;
+      horasVendidas += (Number(proj.tiempoTotal) || 0) * (Number(s.cantidadVendida) || 1);
+    });
 
     $('kpiCobrado').textContent = fmtMoney(cobrado);
     $('kpiPendiente').textContent = fmtMoney(pendiente);
     $('kpiBeneficio').textContent = fmtMoney(beneficio);
-    $('kpiMargen').textContent = margenProm.toFixed(1) + '%';
-    $('kpiPorHora').textContent = fmtMoney(porHora);
+    $('kpiMargen').textContent = cnt > 0 ? ((totMargen / cnt) * 100).toFixed(1) + '%' : '—';
+    $('kpiPorHora').textContent = horasVendidas > 0 ? fmtMoney(cobrado / horasVendidas) : '—';
     $('kpiSaldo').textContent = fmtMoney(saldoInicial);
 
     renderContabilidadTab();
