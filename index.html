@@ -1492,8 +1492,11 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  align-items: start;
-  grid-auto-flow: dense;
+  align-items: stretch;
+}
+.calc-grid-2col > * {
+  align-self: stretch;
+  min-height: 0;
 }
 @media (max-width: 900px) {
   .calc-grid-2col { grid-template-columns: 1fr; }
@@ -4158,13 +4161,14 @@ compute();
 
   // Printers modal (unchanged behavior)
   function printerFormHTML(p){
-    p = p || { id: '', name: '', wattage: 100, amortPerHour: 150 };
+    p = p || { id: '', name: '', wattage: 100, amortPerHour: 150, kWhPrice: 160 };
     return `<h3>${p.id ? 'Editar' : 'Nueva'} impresora</h3>
       <div class="field"><label>Nombre</label><input class="input" id="pfName" value="${esc(p.name)}" placeholder="Ej: Ender 3 V2"></div>
       <div class="field-row">
         <div class="field"><label>Consumo (W)</label><input class="input num" type="number" step="1" id="pfW" value="${Number(p.wattage)||0}"></div>
-        <div class="field"><label>Amortización por hora ($)</label><input class="input num" type="number" step="1" id="pfAmort" value="${Number(p.amortPerHour)||0}"></div>
+        <div class="field"><label>Precio kWh (ARS$)</label><input class="input num" type="number" step="0.01" id="pfKwh" value="${Number(p.kWhPrice)||160}"></div>
       </div>
+      <div class="field"><label>Amortización por hora ($)</label><input class="input num" type="number" step="1" id="pfAmort" value="${Number(p.amortPerHour)||0}"></div>
       <div class="modal-actions">
         <button class="btn ghost" data-close>Cancelar</button>
         <button class="btn primary" id="pfSave" data-id="${esc(p.id)}">${p.id ? 'Guardar cambios' : 'Añadir'}</button>
@@ -4177,6 +4181,7 @@ compute();
       const data = {
         id, name: $('pfName').value.trim() || 'Sin nombre',
         wattage: parseFloat($('pfW').value) || 0,
+        kWhPrice: parseFloat($('pfKwh').value) || 160,
         amortPerHour: parseFloat($('pfAmort').value) || 0,
         createdAt: existing ? existing.createdAt : Date.now(),
       };
@@ -4958,7 +4963,7 @@ compute();
       <label style="font-size:11.5px; color:var(--accent-magenta); font-weight:600; letter-spacing:.05em; display:flex; align-items:center; gap:6px; margin-bottom:6px;">🎯 Elegir impresora del inventario</label>
       <select class="input" id="vxPrinterPicker">
         <option value="">— Elegir de tus impresoras —</option>
-        ${store.printers.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${p.wattage||0}W · amort. ${fmtMoney(p.amortPerHour||0)}/h</option>`).join('')}
+        ${store.printers.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${p.wattage||0}W · $${p.kWhPrice||160}/kWh · amort. ${fmtMoney(p.amortPerHour||0)}/h</option>`).join('')}
       </select>
     `;
     parentField.parentElement.insertBefore(wrap, parentField);
@@ -4968,25 +4973,25 @@ compute();
       // Auto-fill legacy fields
       const consumo = document.getElementById('consumoW');
       if (consumo) { consumo.value = p.wattage || 0; consumo.dispatchEvent(new Event('input', { bubbles: true })); }
-      // Precio de repuestos → usamos amortización × 5000 horas para estimar? Mejor dejar lo que ya está.
-      // Solo sobrescribimos si el usuario carga precio de repuestos = amort × 5000 (aprox 5 años de vida)
+      // Precio kWh viene del perfil de la impresora
+      const kwh = document.getElementById('precioKwh');
+      if (kwh) { kwh.value = p.kWhPrice || 160; kwh.dispatchEvent(new Event('input', { bubbles: true })); }
       const rep = document.getElementById('precioRepuestos');
       if (rep && p.amortPerHour) { rep.value = Math.round((p.amortPerHour || 0) * 5000); rep.dispatchEvent(new Event('input', { bubbles: true })); }
       const hd = document.getElementById('horasDesgaste');
       if (hd) { hd.value = 5000; hd.dispatchEvent(new Event('input', { bubbles: true })); }
-      // Reset el modelo legacy a personalizado
       modelSel.value = 'custom';
       toast('Impresora cargada ✓');
     });
-    // Ocultar campos legacy que ya no querés ver:
-    // - Modelo (autocompleta consumo estimado)
-    // - Consumo real por hora (W)
-    // - Hint text
+    // Ocultar campos legacy
     parentField.style.display = 'none';
     const consumoField = document.getElementById('consumoW')?.closest('.field');
     if (consumoField) consumoField.style.display = 'none';
     const hint = document.getElementById('modeloHint');
     if (hint) hint.style.display = 'none';
+    // Ocultar la card Gastos Fijos (kWh viene de impresora)
+    const gastosCard = document.getElementById('precioKwh')?.closest('.card');
+    if (gastosCard) gastosCard.style.display = 'none';
   }
 
   // ============ Ocultar campos legacy dentro de cada filamento ============
@@ -5026,31 +5031,153 @@ compute();
     }
   }
 
-  // ============ Layout 2 columnas ============
+  // ============ Layout ordenado explícito ============
   function apply2ColLayout(){
     const wrap = document.querySelector('#view-calc .wrap');
     if (!wrap || wrap._vx2col) return;
     wrap._vx2col = true;
-    // Wrap children in a grid container
-    const cards = Array.from(wrap.children).filter(el => el.tagName === 'SECTION' || el.classList.contains('card') || el.classList.contains('results'));
+
+    // Find each section by its h2 text
+    const cardsAll = Array.from(wrap.children).filter(el => el.tagName === 'SECTION' || el.classList.contains('card') || el.classList.contains('results'));
+    const findByH2 = (regex) => cardsAll.find(c => {
+      const h2 = c.querySelector('h2'); return h2 && regex.test(h2.textContent);
+    });
+    const cardCliente   = findByH2(/datos del cliente/i);
+    const cardPerfiles  = findByH2(/perfiles guardados/i);
+    const cardGastos    = findByH2(/gastos fijos/i);
+    const cardImpresora = findByH2(/^\s*impresora/i);
+    const cardPerfilImp = findByH2(/perfil de impresi/i);
+    const cardPiezas    = findByH2(/piezas del proyecto/i);
+    const cardExtras    = findByH2(/^\s*extras/i);
+    const cardGanancia  = findByH2(/^\s*ganancia/i);
+    const cardComis     = findByH2(/comisiones/i);
+    const cardProduc    = findByH2(/producci[óo]n del pedido/i);
+    const cardResults   = cardsAll.find(c => c.classList.contains('results'));
+
+    if (cardGastos) cardGastos.style.display = 'none';
+    if (cardProduc) cardProduc.style.display = 'none';
+    if (cardPerfiles) cardPerfiles.style.display = 'none';
+
+    // Create grid container
     const grid = document.createElement('div');
     grid.className = 'calc-grid-2col';
     wrap.appendChild(grid);
-    cards.forEach(c => grid.appendChild(c));
-    // Mark wide cards to span 2 cols: Piezas del Proyecto y Results
-    grid.querySelectorAll('section, .results').forEach(c => {
-      const h2 = c.querySelector('h2');
-      const txt = (h2?.textContent || '').toLowerCase();
-      if (txt.includes('piezas') || c.classList.contains('results') || c.tagName === 'SECTION' && c.querySelector('.results')) {
-        c.classList.add('vx-span-2');
-      }
-    });
-    // Results always spans 2
-    document.querySelectorAll('#view-calc .results').forEach(r => r.classList.add('vx-span-2'));
-    document.querySelectorAll('#view-calc section').forEach(s => {
-      const h = s.querySelector('h2');
-      if (h && /piezas/i.test(h.textContent)) s.classList.add('vx-span-2');
-    });
+
+    // Move Perfiles Guardados dropdown into the page-head (as a compact button)
+    injectPerfilesDropdownInHeader(cardPerfiles);
+
+    // Rebuild in requested order:
+    const addSpan = (el) => { if (el) { el.classList.add('vx-span-2'); grid.appendChild(el); } };
+    const addCol = (el) => { if (el) grid.appendChild(el); };
+
+    // Row 1: Datos Cliente (span 2)
+    addSpan(cardCliente);
+    // Row 2: Impresora | Perfil Impresión
+    addCol(cardImpresora);
+    addCol(cardPerfilImp);
+    // Row 3: Piezas (span 2)
+    addSpan(cardPiezas);
+    // Row 4: Extras (izq) | Ganancia+Comisiones stacked (der)
+    if (cardExtras) grid.appendChild(cardExtras);
+    // Right stack: crear un wrapper con Ganancia y Comisiones
+    if (cardGanancia || cardComis) {
+      const stack = document.createElement('div');
+      stack.style.cssText = 'display:flex; flex-direction:column; gap:14px;';
+      if (cardGanancia) stack.appendChild(cardGanancia);
+      if (cardComis) stack.appendChild(cardComis);
+      grid.appendChild(stack);
+    }
+    // Row 5: Resultados (span 2 con layout interno)
+    addSpan(cardResults);
+    // Restructure Results internals
+    if (cardResults) restructureResults(cardResults);
+  }
+
+  function injectPerfilesDropdownInHeader(perfilesCard){
+    const pageHead = document.querySelector('#view-calc .page-head > div:last-child');
+    if (!pageHead || pageHead._vxPerfilInjected) return;
+    pageHead._vxPerfilInjected = true;
+    // Extract the select and buttons from the card, add to header
+    const wrap = document.createElement('div');
+    wrap.className = 'vx-perfiles-wrap';
+    wrap.style.cssText = 'position:relative; display:inline-block;';
+    wrap.innerHTML = `
+      <button class="btn" id="vxPerfilesBtn" type="button">📁 Perfiles ▾</button>
+      <div class="vx-perfiles-menu" id="vxPerfilesMenu" style="display:none; position:absolute; top:calc(100% + 6px); right:0; background:var(--surface); border:1px solid var(--border-strong); border-radius:10px; padding:10px; min-width:280px; z-index:50; box-shadow:var(--shadow);">
+        <div class="field" style="margin-bottom:8px;">
+          <label style="font-size:11px; color:var(--text-muted); font-weight:600;">Perfil guardado</label>
+        </div>
+        <div id="vxPerfilesSlot"></div>
+      </div>
+    `;
+    pageHead.insertBefore(wrap, pageHead.firstChild);
+
+    // Move the select + buttons from the perfiles card into the menu
+    if (perfilesCard) {
+      const slot = wrap.querySelector('#vxPerfilesSlot');
+      const sel = perfilesCard.querySelector('#profileSelect');
+      const btnLoad = perfilesCard.querySelector('#loadProfile');
+      const btnDel = perfilesCard.querySelector('#deleteProfile');
+      const btnSave = perfilesCard.querySelector('#saveProfile');
+      if (sel) { slot.appendChild(sel); sel.classList.add('input'); sel.style.marginBottom = '8px'; sel.style.width = '100%'; }
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; gap:6px; flex-wrap:wrap;';
+      [btnLoad, btnDel, btnSave].forEach(b => { if (b) { row.appendChild(b); b.classList.add('small'); } });
+      slot.appendChild(row);
+    }
+
+    const btn = document.getElementById('vxPerfilesBtn');
+    const menu = document.getElementById('vxPerfilesMenu');
+    btn.onclick = e => { e.stopPropagation(); menu.style.display = menu.style.display === 'none' ? '' : 'none'; };
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) menu.style.display = 'none'; });
+  }
+
+  function restructureResults(results){
+    if (results._vxRestructured) return;
+    results._vxRestructured = true;
+    // Grab the direct children
+    const h2 = results.querySelector('h2');
+    const resGroups = results.querySelectorAll('.res-group');
+    const costosBase = resGroups[0];
+    const costosAdic = resGroups[1];
+    const priceCards = results.querySelector('.price-cards');
+    const gananciaBox = results.querySelector('.ganancia-box');
+    const resTiempo = results.querySelector('.res-tiempo');
+    const distTitle = Array.from(results.querySelectorAll('h3')).find(h => /distribuci/i.test(h.textContent));
+    const donut = results.querySelector('.donut-wrap');
+    const actionRow = results.querySelector('.action-row');
+
+    // Clear results content (keep h2)
+    Array.from(results.children).forEach(c => { if (c !== h2) c.remove(); });
+
+    // Create 2-col grid inside results
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;';
+    // Left col
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex; flex-direction:column; gap:16px;';
+    if (costosBase) left.appendChild(costosBase);
+    if (costosAdic) left.appendChild(costosAdic);
+    // Right col
+    const right = document.createElement('div');
+    right.style.cssText = 'display:flex; flex-direction:column; gap:14px;';
+    if (priceCards) right.appendChild(priceCards);
+    if (gananciaBox) right.appendChild(gananciaBox);
+    if (resTiempo) right.appendChild(resTiempo);
+    if (distTitle) right.appendChild(distTitle);
+    if (donut) right.appendChild(donut);
+
+    inner.appendChild(left);
+    inner.appendChild(right);
+    results.appendChild(inner);
+
+    // Below (span 2 = full width): action buttons
+    if (actionRow) results.appendChild(actionRow);
+
+    // Mobile responsive
+    const mq = window.matchMedia('(max-width: 900px)');
+    const apply = () => { inner.style.gridTemplateColumns = mq.matches ? '1fr' : '1fr 1fr'; };
+    mq.addEventListener('change', apply); apply();
   }
 
   function enhanceCalcView(){
