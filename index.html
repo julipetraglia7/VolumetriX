@@ -2309,7 +2309,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
       </div>
 
       <!-- Stat tiles -->
-      <div class="stat-grid" id="invStats" style="grid-template-columns:repeat(4,1fr); margin-top:14px;">
+      <div class="stat-grid" id="invStats" style="grid-template-columns:repeat(5,1fr); margin-top:14px;">
         <div class="stat-tile" data-a="violet">
           <div class="top"><span class="label">Total items</span>
             <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="m10 2.5 6.5 3.75v7.5L10 17.5l-6.5-3.75v-7.5L10 2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
@@ -2329,10 +2329,16 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <span class="value" id="invStatFil">0</span>
         </div>
         <div class="stat-tile" data-a="magenta">
-          <div class="top"><span class="label">Resinas</span>
+          <div class="top"><span class="label">Insumos</span>
             <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M8 3h4l1 3v3l-1 8H8L7 9V6l1-3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
           </div>
-          <span class="value" id="invStatRes">0</span>
+          <span class="value" id="invStatIns">0</span>
+        </div>
+        <div class="stat-tile" data-a="yellow">
+          <div class="top"><span class="label">Packaging</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><path d="M3 7v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7M3 7l7-4 7 4M3 7l7 4 7-4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+          </div>
+          <span class="value" id="invStatPack">0</span>
         </div>
       </div>
 
@@ -2344,7 +2350,8 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         <div class="chip-row" id="invChips">
           <button class="chip active" data-filter="all">Todos</button>
           <button class="chip" data-filter="Filamento">Filamentos</button>
-          <button class="chip" data-filter="Resina">Resinas</button>
+          <button class="chip" data-filter="Insumos">Insumos</button>
+          <button class="chip" data-filter="Packaging">Packaging</button>
           <button class="chip" data-filter="Otro">Otros</button>
         </div>
       </div>
@@ -3776,15 +3783,22 @@ compute();
   let invFilter = 'all';
 
   function renderInventario(){
+    // Migrate old "Resina" → "Insumos" once
+    let migrated = false;
+    store.inventory.forEach(x => { if (x.category === 'Resina') { x.category = 'Insumos'; migrated = true; } });
+    if (migrated) saveLocal();
+
     // Stat tiles
     const filActivos = store.inventory.filter(x => x.category === 'Filamento').length;
-    const resActivos = store.inventory.filter(x => x.category === 'Resina').length;
+    const insActivos = store.inventory.filter(x => x.category === 'Insumos').length;
+    const packActivos = store.inventory.filter(x => x.category === 'Packaging').length;
     const totalItems = invTab === 'impresoras' ? store.printers.length : store.inventory.filter(x => tabMatches(x)).length;
     const stockBajo = store.inventory.filter(x => tabMatches(x) && (x.stock || 0) <= (x.umbral || 0)).length;
     $('invStatTotal').textContent = totalItems;
     $('invStatBajo').textContent = stockBajo;
     $('invStatFil').textContent = filActivos;
-    $('invStatRes').textContent = resActivos;
+    $('invStatIns').textContent = insActivos;
+    $('invStatPack').textContent = packActivos;
 
     const body = $('invBody');
     if (invTab === 'impresoras') {
@@ -3845,9 +3859,9 @@ compute();
     body.querySelectorAll('[data-inv-del]').forEach(b => b.onclick = e => deleteInventoryItem(e.currentTarget.dataset.invDel));
   }
   function tabMatches(x){
-    if (invTab === 'materiales') return x.category === 'Filamento' || x.category === 'Resina';
+    if (invTab === 'materiales') return ['Filamento','Insumos','Packaging','Resina','Otro'].indexOf(x.category) > -1;
     if (invTab === 'productos') return x.category === 'Producto';
-    if (invTab === 'postprocesado') return x.category === 'Postprocesado' || x.category === 'Otro';
+    if (invTab === 'postprocesado') return x.category === 'Postprocesado';
     return false;
   }
 
@@ -3877,9 +3891,10 @@ compute();
     ).join('');
     return `<h3>${item.id ? 'Editar' : 'Agregar'} material</h3>
       <div class="field"><label>Categoría</label>
-        <div class="seg-pick">
+        <div class="seg-pick" style="flex-wrap:wrap;">
           <button data-cat="Filamento" class="${item.category==='Filamento'?'on':''}">Filamento</button>
-          <button data-cat="Resina" class="${item.category==='Resina'?'on':''}">Resina</button>
+          <button data-cat="Insumos" class="${item.category==='Insumos'?'on':''}">Insumos</button>
+          <button data-cat="Packaging" class="${item.category==='Packaging'?'on':''}">Packaging</button>
           <button data-cat="Producto" class="${item.category==='Producto'?'on':''}">Producto</button>
           <button data-cat="Postprocesado" class="${item.category==='Postprocesado'?'on':''}">Postproc.</button>
         </div>
