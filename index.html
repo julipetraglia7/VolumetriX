@@ -1493,6 +1493,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   grid-template-columns: 1fr 1fr;
   gap: 14px;
   align-items: start;
+  grid-auto-flow: dense;
 }
 @media (max-width: 900px) {
   .calc-grid-2col { grid-template-columns: 1fr; }
@@ -4977,6 +4978,15 @@ compute();
       modelSel.value = 'custom';
       toast('Impresora cargada ✓');
     });
+    // Ocultar campos legacy que ya no querés ver:
+    // - Modelo (autocompleta consumo estimado)
+    // - Consumo real por hora (W)
+    // - Hint text
+    parentField.style.display = 'none';
+    const consumoField = document.getElementById('consumoW')?.closest('.field');
+    if (consumoField) consumoField.style.display = 'none';
+    const hint = document.getElementById('modeloHint');
+    if (hint) hint.style.display = 'none';
   }
 
   // ============ Ocultar campos legacy dentro de cada filamento ============
