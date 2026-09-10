@@ -4018,19 +4018,19 @@ compute();
         <input class="input" id="ifTamano" value="${esc(item.tamano || '')}" placeholder="Ej: M — 20×15×8 cm">
       </div>
       <div class="field"><label>Nombre *</label><input class="input" id="ifName" value="${esc(item.name)}" placeholder="Ej: PLA Winkle Rojo"></div>
-      <div class="field-row">
-        <div class="field"><label>Tipo</label>
+      <div class="field-row" id="ifTipoUnidadRow">
+        <div class="field" id="ifTipoWrap" style="${['Filamento','Producto'].includes(item.category) ? '' : 'display:none;'}"><label>Tipo</label>
           <select class="input" id="ifTipo">
             ${['PLA','PLA+','PETG','ABS','ASA','TPU','Nylon','Resina Std','Resina ABS','Otro'].map(t => `<option ${item.tipo===t?'selected':''}>${t}</option>`).join('')}
           </select>
         </div>
         <div class="field"><label>Unidad</label>
           <select class="input" id="ifUnidad">
-            ${['g','kg','ml','L','unidades'].map(u => `<option ${item.unidad===u?'selected':''}>${u}</option>`).join('')}
+            ${['g','kg','ml','L','unidades','m','cm'].map(u => `<option ${item.unidad===u?'selected':''}>${u}</option>`).join('')}
           </select>
         </div>
       </div>
-      <div class="field-row">
+      <div class="field-row" id="ifMarcaColorRow" style="${item.category==='Filamento' ? '' : 'display:none;'}">
         <div class="field"><label>Marca</label><input class="input" id="ifMarca" value="${esc(item.marca)}" placeholder="Ej: Winkle"></div>
         <div class="field"><label>Color</label>
           <div class="color-pick">
@@ -4040,8 +4040,8 @@ compute();
         </div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Cantidad inicial *</label><input class="input num" type="number" step="1" id="ifStock" value="${Number(item.stock)||0}"></div>
-        <div class="field"><label>Precio por kg</label><input class="input num" type="number" step="0.01" id="ifPrice" value="${Number(item.pricePerKg)||0}"></div>
+        <div class="field"><label>Cantidad inicial *</label><input class="input num" type="number" step="0.01" id="ifStock" value="${Number(item.stock)||0}"></div>
+        <div class="field"><label id="ifPriceLabel">${item.category === 'Filamento' ? 'Precio por kg' : 'Precio por unidad'}</label><input class="input num" type="number" step="0.01" id="ifPrice" value="${Number(item.category==='Filamento' ? (item.pricePerKg||0) : (item.pricePerUnit||item.pricePerKg||0))}"></div>
       </div>
       <div class="field-row">
         <div class="field"><label>Umbral stock bajo</label><input class="input num" type="number" step="1" id="ifUmbral" value="${Number(item.umbral)||0}"></div>
@@ -4082,6 +4082,7 @@ compute();
     });
   }
   function wireInventoryForm(existing){
+    const DEFAULT_UNIDAD = { Filamento: 'g', Insumos: 'unidades', Packaging: 'unidades', Producto: 'unidades', Postprocesado: 'unidades' };
     const refreshSubtipos = () => {
       const cat = document.querySelector('.seg-pick button[data-cat].on')?.dataset.cat || 'Filamento';
       const opts = subtiposFor(cat);
@@ -4093,6 +4094,19 @@ compute();
         sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(s => `<option ${cur===s?'selected':''}>${esc(s)}</option>`).join('');
       }
       $('ifTamanoWrap').style.display = (cat === 'Packaging' && $('ifSubtipo')?.value === 'Caja') ? '' : 'none';
+      // Toggle Tipo (solo Filamento y Producto)
+      const showTipo = ['Filamento','Producto'].includes(cat);
+      $('ifTipoWrap').style.display = showTipo ? '' : 'none';
+      // Toggle Marca/Color (solo Filamento)
+      $('ifMarcaColorRow').style.display = cat === 'Filamento' ? '' : 'none';
+      // Auto-ajustar unidad por defecto
+      const uSel = $('ifUnidad');
+      if (uSel && DEFAULT_UNIDAD[cat] && (!existing || existing.category !== cat)) {
+        uSel.value = DEFAULT_UNIDAD[cat];
+      }
+      // Auto-actualizar etiqueta de precio
+      const lbl = $('ifPriceLabel');
+      if (lbl) lbl.textContent = cat === 'Filamento' ? 'Precio por kg' : 'Precio por unidad';
     };
     document.querySelectorAll('.seg-pick button[data-cat]').forEach(b => b.onclick = () => {
       document.querySelectorAll('.seg-pick button[data-cat]').forEach(x => x.classList.remove('on'));
