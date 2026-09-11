@@ -4565,22 +4565,34 @@ compute();
 
   // Modals contabilidad
   // Payment methods → días hasta liquidación (0 = inmediato/cobrado)
-  // fee = % que la plataforma se queda por transacción (base tasa+IVA).
-  //   Tienda Nube (Pago Nube): 4.21% — es la tasa base + IVA que aplica
-  //     SIEMPRE. Las cuotas (~2.73%) y retenciones (~0.21%) NO aparecen
-  //     por orden sino en el resumen mensual y solo en ciertos casos
-  //     (pagos en cuotas, condición fiscal), por eso no las contamos acá.
-  //   Mercado Pago (directo): 4.30% + IVA de cargo por transacción.
-  //     Si además vendés a través de un tercero (ej. tienda que usa MP
-  //     como procesador) se suma 2% de "uso de plataforma". Para el caso
-  //     típico de venta directa por MP mantenemos solo 4.30%.
+  // fee = % que la plataforma se queda por transacción (tasa base + IVA).
+  //   Dentro de Pago Nube / Mercado Pago el % cambia según cómo pagó
+  //   el cliente: tarjeta de crédito vs transferencia/depósito.
+  //     Tarjeta:       3.49% + 21% IVA = 4.2229%
+  //     Transferencia: 1.50% + 21% IVA = 1.815%
+  //   Las cuotas y retenciones aparecen a veces — usar el checkbox
+  //   "Cargar comisión real" en esos casos.
   const PAY_METHODS = [
-    { id: 'efectivo',      name: 'Efectivo',              days: 0,   fee: 0 },
-    { id: 'transferencia', name: 'Transferencia',         days: 0,   fee: 0 },
-    { id: 'tienda_nube',   name: 'Tienda Nube',           days: 14,  fee: 4.2229 },
-    { id: 'mercado_pago',  name: 'Mercado Pago',          days: 18,  fee: 4.30 },
-    { id: 'otro',          name: 'Otro (definir manual)', days: null, fee: 0 },
+    { id: 'efectivo',        name: 'Efectivo',                            days: 0,   fee: 0 },
+    { id: 'transferencia',   name: 'Transferencia bancaria directa',      days: 0,   fee: 0 },
+    { id: 'tn_tarjeta',      name: 'Tienda Nube — Tarjeta',               days: 14,  fee: 4.2229 },
+    { id: 'tn_transferencia',name: 'Tienda Nube — Transferencia/Depósito', days: 14,  fee: 1.815 },
+    { id: 'mp_tarjeta',      name: 'Mercado Pago — Tarjeta',              days: 18,  fee: 4.30 },
+    { id: 'mp_transferencia',name: 'Mercado Pago — Dinero en cuenta',     days: 0,   fee: 1.815 },
+    { id: 'otro',            name: 'Otro (definir manual)',               days: null, fee: 0 },
   ];
+  // Compatibilidad con ventas viejas guardadas con ids anteriores
+  const PAY_METHODS_LEGACY = { 'tienda_nube': 'tn_tarjeta', 'mercado_pago': 'mp_tarjeta' };
+  function normalizeSaleMethod(s){
+    if (s && s.metodoPago && PAY_METHODS_LEGACY[s.metodoPago]) {
+      s.metodoPago = PAY_METHODS_LEGACY[s.metodoPago];
+      const met = PAY_METHODS.find(m => m.id === s.metodoPago);
+      if (met) s.metodoPagoLabel = met.name;
+    }
+    return s;
+  }
+  // Normalizar todas las ventas existentes al arrancar
+  (store.sales || []).forEach(normalizeSaleMethod);
   window.vxPayMethods = PAY_METHODS;
 
   function addDaysISO(iso, days){
