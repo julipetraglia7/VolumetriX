@@ -4584,7 +4584,7 @@ compute();
     { id: 'tn_tarjeta',      name: 'Tienda Nube — Tarjeta',               days: 14,  fee: 4.2229 },
     { id: 'tn_transferencia',name: 'Tienda Nube — Transferencia/Depósito', days: 14,  fee: 1.815 },
     { id: 'mp_tarjeta',      name: 'Mercado Pago — Tarjeta',              days: 18,  fee: 4.30 },
-    { id: 'mp_transferencia',name: 'Mercado Pago — Dinero en cuenta',     days: 0,   fee: 1.815 },
+    { id: 'mp_transferencia',name: 'Mercado Pago — Dinero en cuenta',     days: 0,   fee: 0 },
     { id: 'otro',            name: 'Otro (definir manual)',               days: null, fee: 0 },
   ];
   // Compatibilidad con ventas viejas guardadas con ids anteriores
@@ -4948,8 +4948,8 @@ compute();
       return 'tn_tarjeta';
     }
     // Mercado Pago
-    if (s.includes('mercado pago') || s.includes('mercadopago') || s === 'mp') {
-      if (s.includes('cuenta') || s.includes('dinero')) return 'mp_transferencia';
+    if (s.includes('mercado pago') || s.includes('mercadopago') || s === 'mp' || s.includes('billetera virtual')) {
+      if (s.includes('cuenta') || s.includes('dinero') || s.includes('billetera')) return 'mp_transferencia';
       return 'mp_tarjeta';
     }
     // Efectivo / Transferencia directa
