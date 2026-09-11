@@ -4037,11 +4037,11 @@ compute();
         <div class="inv-swatch${m.photo ? ' has-photo' : ''}" style="${swStyle}"></div>
         <div class="inv-name">
           <b>${esc(m.name)}</b>
-          <span>${esc(m.marca || 'Sin marca')} · ${esc(m.tipo || m.category)}</span>
+          <span>${esc(invSubtitle(m))}</span>
         </div>
         <span class="inv-tag">${esc((m.category || '').toUpperCase())}</span>
         <span class="inv-stock ${low ? 'low' : ''}">${(m.stock || 0).toLocaleString('es-AR')} ${esc(m.unidad || 'g')}</span>
-        <span class="inv-price">${fmtMoney(m.pricePerKg || (m.pricePerUnit || 0) * 1000)}/kg</span>
+        <span class="inv-price">${m.category === 'Filamento' ? `${fmtMoney(m.pricePerKg || (m.pricePerUnit || 0) * 1000)}/kg` : `${fmtMoney(m.pricePerUnit || m.pricePerKg || 0)}/${esc(m.unidad || 'u')}`}</span>
         <div class="inv-actions">
           <button class="icon-btn" data-inv-edit="${esc(m.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-btn danger" data-inv-del="${esc(m.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
@@ -4077,6 +4077,23 @@ compute();
     renderInventario();
   });
 
+  // Subtítulo del item en la tabla de inventario según categoría
+  function invSubtitle(m){
+    if (!m) return '';
+    if (m.category === 'Filamento') {
+      return [m.marca || 'Sin marca', m.tipo].filter(Boolean).join(' · ');
+    }
+    if (m.category === 'Producto') {
+      return [m.marca, m.tipo].filter(Boolean).join(' · ') || 'Producto';
+    }
+    if (m.category === 'Packaging') {
+      return [m.subtipo, m.tamano].filter(Boolean).join(' · ') || 'Packaging';
+    }
+    if (m.category === 'Insumos') {
+      return m.subtipo || 'Insumo';
+    }
+    return m.category || 'Item';
+  }
   const PACKAGING_SUBTIPOS = ['Caja','Viruta','Papel burbuja','Cinta scotch','Cinta frágil','Bolsa ecommerce','Etiqueta autoadhesiva','Otro'];
   const INSUMOS_SUBTIPOS = ['LED RGB','LED común','Batería','Interruptor','Cable','Imán','Resorte','Tornillería','Adhesivo','Otro'];
   function subtiposFor(cat){ return cat === 'Packaging' ? PACKAGING_SUBTIPOS : cat === 'Insumos' ? INSUMOS_SUBTIPOS : []; }
