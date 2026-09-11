@@ -4092,11 +4092,42 @@ compute();
     if (m.category === 'Insumos') {
       return m.subtipo || 'Insumo';
     }
+    if (m.category === 'Postprocesado') {
+      return [m.subtipo, m.tamano, m.color && m.color !== '#666666' ? m.color : ''].filter(Boolean).join(' · ') || 'Postprocesado';
+    }
     return m.category || 'Item';
   }
   const PACKAGING_SUBTIPOS = ['Caja','Viruta','Papel burbuja','Cinta scotch','Cinta frágil','Bolsa ecommerce','Etiqueta autoadhesiva','Otro'];
   const INSUMOS_SUBTIPOS = ['LED RGB','LED común','Batería','Interruptor','Cable','Imán','Resorte','Tornillería','Adhesivo','Otro'];
-  function subtiposFor(cat){ return cat === 'Packaging' ? PACKAGING_SUBTIPOS : cat === 'Insumos' ? INSUMOS_SUBTIPOS : []; }
+  const POSTPROC_SUBTIPOS = ['Pintura','Masilla','Pegamento','Resina','Lija','Otro'];
+  function subtiposFor(cat){
+    if (cat === 'Packaging') return PACKAGING_SUBTIPOS;
+    if (cat === 'Insumos') return INSUMOS_SUBTIPOS;
+    if (cat === 'Postprocesado') return POSTPROC_SUBTIPOS;
+    return [];
+  }
+  // ¿Este item mostrá el campo Nombre? Filamento y Producto sí (identificador libre).
+  // Insumos, Packaging, Postprocesado usan subtipo (+ color/tamaño cuando aplica) como nombre.
+  function usesFreeName(cat){ return cat === 'Filamento' || cat === 'Producto'; }
+  // ¿Este item permite tamaño?
+  function usesTamano(cat, subtipo){
+    if (cat === 'Packaging' && subtipo === 'Caja') return true;
+    if (cat === 'Postprocesado' && ['Pintura','Masilla','Pegamento','Resina'].includes(subtipo)) return true;
+    return false;
+  }
+  // ¿Este item permite color?
+  function usesColor(cat, subtipo){
+    if (cat === 'Filamento') return true;
+    if (cat === 'Postprocesado' && subtipo === 'Pintura') return true;
+    return false;
+  }
+  // Genera el nombre automático para items que no tienen nombre libre.
+  function autoName(item){
+    const parts = [item.subtipo || item.category];
+    if (item.tamano) parts.push(item.tamano);
+    if (item.color && usesColor(item.category, item.subtipo)) parts.push(item.color);
+    return parts.filter(Boolean).join(' — ');
+  }
   function inventoryForm(item){
     item = item || { id: '', category: 'Filamento', tipo: 'PLA', subtipo: '', tamano: '', name: '', marca: '', color: '#FF0000', unidad: 'g', stock: 1000, umbral: 100, pricePerKg: 20000, proveedor: '', notas: '' };
     const provOptions = ['<option value="">Sin proveedor</option>'].concat(
@@ -4119,11 +4150,11 @@ compute();
           ${subtiposFor(item.category).map(s => `<option ${item.subtipo===s?'selected':''}>${esc(s)}</option>`).join('')}
         </select>
       </div>
-      <div class="field" id="ifTamanoWrap" style="${item.category==='Packaging' && item.subtipo==='Caja' ? '' : 'display:none;'}">
-        <label>Tamaño (ej: S / M / L o "15×10×6 cm")</label>
-        <input class="input" id="ifTamano" value="${esc(item.tamano || '')}" placeholder="Ej: M — 20×15×8 cm">
+      <div class="field" id="ifTamanoWrap" style="${usesTamano(item.category, item.subtipo) ? '' : 'display:none;'}">
+        <label id="ifTamanoLabel">${item.category === 'Postprocesado' ? 'Tamaño (ml / grs)' : 'Tamaño (ej: S / M / L o "15×10×6 cm")'}</label>
+        <input class="input" id="ifTamano" value="${esc(item.tamano || '')}" placeholder="${item.category === 'Postprocesado' ? 'Ej: 250 ml' : 'Ej: M — 20×15×8 cm'}">
       </div>
-      <div class="field"><label>Nombre *</label><input class="input" id="ifName" value="${esc(item.name)}" placeholder="Ej: PLA Winkle Rojo"></div>
+      <div class="field" id="ifNameWrap" style="${usesFreeName(item.category) ? '' : 'display:none;'}"><label>Nombre *</label><input class="input" id="ifName" value="${esc(item.name)}" placeholder="Ej: PLA Winkle Rojo"></div>
       <div class="field-row" id="ifTipoUnidadRow">
         <div class="field" id="ifTipoWrap" style="${['Filamento','Producto'].includes(item.category) ? '' : 'display:none;'}"><label>Tipo</label>
           <select class="input" id="ifTipo">
@@ -4137,12 +4168,19 @@ compute();
         </div>
       </div>
       <div class="field-row" id="ifMarcaColorRow" style="${item.category==='Filamento' ? '' : 'display:none;'}">
-        <div class="field"><label>Marca</label><input class="input" id="ifMarca" value="${esc(item.marca)}" placeholder="Ej: Winkle"></div>
-        <div class="field"><label>Color</label>
+        <div class="field" id="ifMarcaWrap"><label>Marca</label><input class="input" id="ifMarca" value="${esc(item.marca)}" placeholder="Ej: Winkle"></div>
+        <div class="field" id="ifColorWrap"><label>Color</label>
           <div class="color-pick">
             <input type="color" id="ifColor" value="${esc(item.color || '#666666')}">
             <input class="input" id="ifColorHex" value="${esc(item.color || '#666666')}" style="flex:1;">
           </div>
+        </div>
+      </div>
+      <div class="field" id="ifColorOnlyWrap" style="${usesColor(item.category, item.subtipo) && item.category!=='Filamento' ? '' : 'display:none;'}">
+        <label>Color</label>
+        <div class="color-pick">
+          <input type="color" id="ifColor2" value="${esc(item.color || '#666666')}">
+          <input class="input" id="ifColorHex2" value="${esc(item.color || '#666666')}" style="flex:1;" placeholder="Ej: Rojo mate">
         </div>
       </div>
       <div class="field-row">
@@ -4199,12 +4237,23 @@ compute();
         const cur = sel.value;
         sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(s => `<option ${cur===s?'selected':''}>${esc(s)}</option>`).join('');
       }
-      $('ifTamanoWrap').style.display = (cat === 'Packaging' && $('ifSubtipo')?.value === 'Caja') ? '' : 'none';
+      const currentSubtipo = $('ifSubtipo')?.value || '';
+      const wantsTamano = usesTamano(cat, currentSubtipo);
+      $('ifTamanoWrap').style.display = wantsTamano ? '' : 'none';
+      // Actualizar label del tamaño según categoría
+      if (wantsTamano) {
+        $('ifTamanoLabel').textContent = cat === 'Postprocesado' ? 'Tamaño (ml / grs)' : 'Tamaño (ej: S / M / L o "15×10×6 cm")';
+        $('ifTamano').placeholder = cat === 'Postprocesado' ? 'Ej: 250 ml' : 'Ej: M — 20×15×8 cm';
+      }
       // Toggle Tipo (solo Filamento y Producto)
       const showTipo = ['Filamento','Producto'].includes(cat);
       $('ifTipoWrap').style.display = showTipo ? '' : 'none';
-      // Toggle Marca/Color (solo Filamento)
+      // Toggle Marca/Color row (solo Filamento)
       $('ifMarcaColorRow').style.display = cat === 'Filamento' ? '' : 'none';
+      // Toggle Color solo (Postprocesado + Pintura)
+      $('ifColorOnlyWrap').style.display = (usesColor(cat, currentSubtipo) && cat !== 'Filamento') ? '' : 'none';
+      // Toggle Nombre (solo Filamento y Producto lo tienen libre)
+      $('ifNameWrap').style.display = usesFreeName(cat) ? '' : 'none';
       // Auto-ajustar unidad por defecto
       const uSel = $('ifUnidad');
       if (uSel && DEFAULT_UNIDAD[cat] && (!existing || existing.category !== cat)) {
@@ -4219,13 +4268,15 @@ compute();
       b.classList.add('on');
       refreshSubtipos();
     });
-    $('ifSubtipo')?.addEventListener('change', () => {
-      const cat = document.querySelector('.seg-pick button[data-cat].on')?.dataset.cat;
-      $('ifTamanoWrap').style.display = (cat === 'Packaging' && $('ifSubtipo').value === 'Caja') ? '' : 'none';
-    });
+    $('ifSubtipo')?.addEventListener('change', () => { refreshSubtipos(); });
     const ic = $('ifColor'), ih = $('ifColorHex');
     ic.oninput = () => ih.value = ic.value;
     ih.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ih.value)) ic.value = ih.value; };
+    const ic2 = $('ifColor2'), ih2 = $('ifColorHex2');
+    if (ic2 && ih2) {
+      ic2.oninput = () => ih2.value = ic2.value;
+      ih2.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ih2.value)) ic2.value = ih2.value; };
+    }
 
     // Photo upload
     let currentPhoto = existing ? (existing.photo || '') : '';
@@ -4246,14 +4297,28 @@ compute();
       const category = cat ? cat.dataset.cat : 'Filamento';
       const id = existing ? existing.id : uid();
       const pricePerKg = parseFloat($('ifPrice').value) || 0;
+      const subtipoVal = $('ifSubtipo') ? $('ifSubtipo').value : '';
+      const tamanoVal = $('ifTamano') ? $('ifTamano').value.trim() : '';
+      // Color: si estamos en Filamento usamos el hex del row Marca+Color; sino el del wrap solo-color
+      let colorVal = '';
+      if (category === 'Filamento') colorVal = $('ifColorHex').value;
+      else if (usesColor(category, subtipoVal) && $('ifColorHex2')) colorVal = $('ifColorHex2').value;
+      // Nombre: si la categoría usa nombre libre, tomarlo del input; sino auto-generar
+      const marcaVal = $('ifMarca') ? $('ifMarca').value.trim() : '';
+      let nameVal;
+      if (usesFreeName(category)) {
+        nameVal = $('ifName').value.trim() || 'Sin nombre';
+      } else {
+        nameVal = autoName({ category, subtipo: subtipoVal, tamano: tamanoVal, color: colorVal }) || 'Sin nombre';
+      }
       const data = {
         id, category,
         tipo: $('ifTipo').value,
-        subtipo: $('ifSubtipo') ? $('ifSubtipo').value : '',
-        tamano: $('ifTamano') ? $('ifTamano').value.trim() : '',
-        name: $('ifName').value.trim() || 'Sin nombre',
-        marca: $('ifMarca').value.trim(),
-        color: $('ifColorHex').value,
+        subtipo: subtipoVal,
+        tamano: tamanoVal,
+        name: nameVal,
+        marca: marcaVal,
+        color: colorVal || (existing ? existing.color : '#666666'),
         unidad: $('ifUnidad').value,
         stock: parseFloat($('ifStock').value) || 0,
         umbral: parseFloat($('ifUmbral').value) || 0,
