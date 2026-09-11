@@ -1986,13 +1986,13 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <span class="value" id="statIngresos">$0</span>
           <span class="foot">Total del mes</span>
         </div>
-        <div class="stat-tile" data-a="magenta">
+        <div class="stat-tile" data-a="magenta" title="Ventas pendientes con comisiones ya descontadas. Abajo: fecha en que se libera la última.">
           <div class="top">
-            <span class="label">Horas impresión</span>
-            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M10 6v4l2.6 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+            <span class="label">A liquidar</span>
+            <span class="ic"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="6" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h14" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="12.5" r="1" fill="currentColor"/></svg></span>
           </div>
-          <span class="value" id="statHoras">0.0h</span>
-          <span class="foot">Acumuladas</span>
+          <span class="value" id="statLiquidar">$0</span>
+          <span class="foot" id="statLiquidarFecha">Sin ventas pendientes</span>
         </div>
       </div>
 
@@ -3791,8 +3791,26 @@ compute();
     $('statVentas').textContent = salesThisMonth.length;
     const ingresos = salesThisMonth.filter(s => s.cobrado !== false).reduce((sum, s) => sum + (Number(s.monto) || 0), 0);
     $('statIngresos').textContent = fmtMoney(ingresos);
-    const horas = store.projects.reduce((sum, p) => sum + (Number(p.tiempoTotal) || 0), 0);
-    $('statHoras').textContent = horas.toFixed(1) + 'h';
+    // A liquidar: ventas pendientes (neto de comisiones) y fecha de la última liberación
+    const pendientes = store.sales.filter(s => s.cobrado === false);
+    const aLiquidar = pendientes.reduce((sum, s) => sum + ((Number(s.monto) || 0) - feeForSale(s)), 0);
+    if ($('statLiquidar')) $('statLiquidar').textContent = fmtMoney(aLiquidar);
+    if ($('statLiquidarFecha')) {
+      if (pendientes.length === 0) {
+        $('statLiquidarFecha').textContent = 'Sin ventas pendientes';
+      } else {
+        const fechas = pendientes.map(s => s.fechaLiquidacion).filter(Boolean).sort();
+        const ultima = fechas[fechas.length - 1];
+        if (ultima) {
+          const d = new Date(ultima + 'T00:00:00');
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = d.toLocaleDateString('es-AR', { month: 'short' });
+          $('statLiquidarFecha').textContent = `Todo libre el ${dd} ${mm}`;
+        } else {
+          $('statLiquidarFecha').textContent = `${pendientes.length} venta${pendientes.length>1?'s':''} pendiente${pendientes.length>1?'s':''}`;
+        }
+      }
+    }
 
     renderMiniChart('chartVentas', store.sales, 'var(--accent-magenta)');
     renderMiniChart('chartGastos', store.expenses, 'var(--accent-orange)');
