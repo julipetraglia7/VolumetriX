@@ -4480,11 +4480,12 @@ compute();
       // Sort configurable
       const sortState = window.vxSalesSort || { field: 'fecha', dir: 'desc' };
       window.vxSalesSort = sortState;
+      const numFromDesc = v => v.numeroVenta || (v.descripcion ? parseInt(String(v.descripcion).match(/\d+/)?.[0]) : 0) || 0;
       const sales = [...store.sales].sort((a, b) => {
         const f = sortState.field;
         let av, bv;
         if (f === 'monto') { av = Number(a.monto)||0; bv = Number(b.monto)||0; }
-        else if (f === 'descripcion') { av = (a.descripcion||'').toLowerCase(); bv = (b.descripcion||'').toLowerCase(); }
+        else if (f === 'descripcion') { av = numFromDesc(a); bv = numFromDesc(b); }
         else /* fecha */ { av = a.fecha || ''; bv = b.fecha || ''; }
         const cmp = av < bv ? -1 : av > bv ? 1 : ((a.createdAt||0) - (b.createdAt||0));
         return sortState.dir === 'asc' ? cmp : -cmp;
@@ -4494,7 +4495,7 @@ compute();
       const sortableTh = (field, label, extra='') => `<th style="${thStyle}${extra}" data-sort="${field}">${esc(label)}<span style="color:var(--accent-magenta);">${arrow(field)}</span></th>`;
       if (sales.length === 0) { body.innerHTML = emptyStateHTML('Sin ventas', 'Presioná "Crear venta" para registrar la primera.', '💰', true); return; }
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr>${sortableTh('fecha','Fecha')}${sortableTh('descripcion','Descripción')}<th>Modo de pago</th><th>Estado</th><th>Se libera</th>${sortableTh('monto','Monto','text-align:right;')}<th style="text-align:right;">Comisión</th><th style="text-align:right;">Neto</th><th></th></tr></thead>
+        <thead><tr>${sortableTh('fecha','Fecha')}${sortableTh('descripcion','N° venta')}<th>Modo de pago</th><th>Estado</th><th>Se libera</th>${sortableTh('monto','Monto','text-align:right;')}<th style="text-align:right;">Comisión</th><th style="text-align:right;">Neto</th><th></th></tr></thead>
         <tbody>${sales.map(v => {
           let liqCell = '—';
           if (v.cobrado === false && v.fechaLiquidacion) {
@@ -4673,20 +4674,15 @@ compute();
   }
 
   function ventaForm(){
-    const projOpts = ['<option value="">— Sin proyecto asociado —</option>'].concat(
-      store.projects.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}${p.cliente ? ' — ' + esc(p.cliente) : ''}</option>`)
-    ).join('');
     return `<h3>Nueva venta</h3>
-      <div class="field"><label>🎯 Proyecto asociado (descuenta inventario)</label>
-        <select class="input" id="vfProy">${projOpts}</select>
-        <div class="hint" id="vfProyHint" style="font-size:11.5px; color:var(--text-faint); margin-top:4px;"></div>
+      <div class="field"><label>N° de venta *</label>
+        <input class="input num" type="number" min="1" step="1" id="vfDesc" placeholder="Ej: 134" required>
       </div>
       <div class="field-row">
-        <div class="field"><label>Cantidad vendida</label><input class="input num" type="number" step="1" min="1" id="vfCantidad" value="1"></div>
         <div class="field"><label>Fecha de compra</label><input class="input" type="date" id="vfFecha" value="${todayISO()}"></div>
+        <div class="field"><label>Cantidad vendida</label><input class="input num" type="number" min="1" step="1" id="vfCantidad" value="1"></div>
       </div>
-      <div class="field"><label>Monto total *</label><input class="input num" type="number" step="0.01" id="vfMonto" value="0"></div>
-      <div class="field"><label>Descripción</label><input class="input" id="vfDesc" placeholder="Ej: Pedido llaveros — Juan"></div>
+      <div class="field"><label>Monto total (ARS$) *</label><input class="input num" type="number" min="0.01" step="0.01" id="vfMonto" placeholder="Ej: 51092" required></div>
       <div class="field"><label>💳 Modo de pago</label>
         <select class="input" id="vfMetodo">
           ${PAY_METHODS.map(m => `<option value="${m.id}">${esc(m.name)}${m.days ? ` (+${m.days} días)` : ''}</option>`).join('')}
@@ -4705,10 +4701,69 @@ compute();
       </div>
       <div class="field" id="vfComisOverrideWrap" style="display:none;">
         <label>Comisión total real (ARS$)</label>
-        <input class="input num" type="number" step="0.01" id="vfComisOverride" value="" placeholder="Ej: 3081,78 (procesamiento + retención)">
+        <input class="input num" type="number" min="0.01" step="0.01" id="vfComisOverride" placeholder="Ej: 3081,78 (procesamiento + retención)">
         <div class="hint" style="color:var(--text-faint); font-size:11px; margin-top:4px;">Sobreescribe el % automático. Copiá el total de "Costo de procesamiento + Retención" de tu plataforma.</div>
       </div>
+      <div class="field" style="margin-top:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+          <label style="margin:0;">🎯 Proyectos asociados (descuentan inventario)</label>
+          <button type="button" class="btn small" id="vfAddProy">+ Agregar proyecto</button>
+        </div>
+        <div id="vfProyList"></div>
+        <div class="hint" id="vfProyHint" style="font-size:11.5px; color:var(--text-faint); margin-top:6px;">Sin proyecto: no se descuenta stock.</div>
+      </div>
       <div class="modal-actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="vfSave">Añadir venta</button></div>`;
+  }
+
+  // Lista dinámica de proyectos asociados a una venta
+  window.vxVentaProys = [];
+  function projOptionsHTML(selectedId){
+    return ['<option value="">— Elegir proyecto —</option>'].concat(
+      store.projects.map(p => `<option value="${esc(p.id)}" ${selectedId===p.id?'selected':''}>${esc(p.nombre)}${p.cliente ? ' — ' + esc(p.cliente) : ''}</option>`)
+    ).join('');
+  }
+  function renderVentaProys(){
+    const list = document.getElementById('vfProyList');
+    if (!list) return;
+    if (window.vxVentaProys.length === 0) { list.innerHTML = ''; refreshProyHint(); return; }
+    list.innerHTML = window.vxVentaProys.map((item, i) => `
+      <div style="display:grid; grid-template-columns:1fr 90px 32px; gap:6px; align-items:center; margin-bottom:6px;">
+        <select class="input" data-vp-sel="${i}">${projOptionsHTML(item.proyectoId)}</select>
+        <input class="input num" type="number" min="1" step="1" data-vp-qty="${i}" value="${Number(item.cantidad)||1}">
+        <button type="button" class="icon-btn danger" data-vp-del="${i}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-vp-sel]').forEach(el => el.onchange = e => { window.vxVentaProys[+e.target.dataset.vpSel].proyectoId = e.target.value; refreshProyHint(); });
+    list.querySelectorAll('[data-vp-qty]').forEach(el => el.oninput = e => { window.vxVentaProys[+e.target.dataset.vpQty].cantidad = Math.max(1, parseInt(e.target.value) || 1); refreshProyHint(); });
+    list.querySelectorAll('[data-vp-del]').forEach(el => el.onclick = e => { window.vxVentaProys.splice(+e.currentTarget.dataset.vpDel, 1); renderVentaProys(); });
+    refreshProyHint();
+  }
+  function refreshProyHint(){
+    const hint = document.getElementById('vfProyHint');
+    if (!hint) return;
+    const list = window.vxVentaProys.filter(x => x.proyectoId);
+    if (list.length === 0) { hint.textContent = 'Sin proyecto: no se descuenta stock.'; hint.style.color = 'var(--text-faint)'; return; }
+    const problems = [];
+    let totalMats = 0;
+    list.forEach(item => {
+      const p = store.projects.find(x => x.id === item.proyectoId);
+      if (!p || !p.bom) return;
+      const boms = Array.isArray(p.bom) ? p.bom : [].concat(p.bom.filamentos||[], p.bom.insumos||[], p.bom.packaging||[]);
+      totalMats += boms.length;
+      boms.forEach(b => {
+        const inv = store.inventory.find(x => x.id === (b.invId || b.inventoryId));
+        if (!inv) return;
+        const needed = (b.cantidad || 0) * (item.cantidad || 1);
+        if (needed > (inv.stock || 0)) problems.push(`${inv.name} (falta ${(needed - inv.stock).toFixed(1)} ${inv.unidad})`);
+      });
+    });
+    if (problems.length > 0) {
+      hint.innerHTML = '⚠ Stock insuficiente:<br>' + problems.map(esc).join('<br>');
+      hint.style.color = '#fca5a5';
+    } else {
+      hint.textContent = `✓ Se descontarán ${totalMats} materiales entre ${list.length} proyecto${list.length>1?'s':''}.`;
+      hint.style.color = '#6ee7a7';
+    }
   }
   function gastoForm(existing){
     const g = existing || { fecha: todayISO(), descripcion: '', monto: 0, categoria: 'Materiales', proveedor: '', numFactura: '', justificante: false, notas: '' };
@@ -4752,33 +4807,10 @@ compute();
   }
   $('baVenta').onclick = () => {
     openModal(ventaForm(), true);
-    // Project selector wiring: show BOM preview
-    const refreshProyHint = () => {
-      const pid = $('vfProy').value;
-      const cant = parseInt($('vfCantidad').value) || 1;
-      const hint = $('vfProyHint');
-      if (!pid) { hint.textContent = 'Sin proyecto: no se descuenta stock.'; hint.style.color = 'var(--text-faint)'; return; }
-      const p = store.projects.find(x => x.id === pid);
-      if (!p || !p.bom || p.bom.length === 0) { hint.textContent = '⚠ Este proyecto no tiene materiales del inventario cargados.'; hint.style.color = 'var(--accent-yellow)'; return; }
-      // Check stock
-      const problems = [];
-      p.bom.forEach(b => {
-        const inv = store.inventory.find(x => x.id === b.inventoryId);
-        if (!inv) return;
-        const needed = (b.cantidad || 0) * cant;
-        if (needed > (inv.stock || 0)) problems.push(`${inv.name} (falta ${(needed - inv.stock).toFixed(1)} ${inv.unidad})`);
-      });
-      if (problems.length > 0) {
-        hint.innerHTML = '⚠ Stock insuficiente:<br>' + problems.map(esc).join('<br>');
-        hint.style.color = '#fca5a5';
-      } else {
-        hint.textContent = `✓ Se descontarán ${p.bom.length} materiales × ${cant} unidad(es) del inventario.`;
-        hint.style.color = '#6ee7a7';
-      }
-    };
-    $('vfProy').addEventListener('change', refreshProyHint);
+    window.vxVentaProys = [];
+    renderVentaProys();
+    $('vfAddProy').onclick = () => { window.vxVentaProys.push({ proyectoId: '', cantidad: 1 }); renderVentaProys(); };
     $('vfCantidad').addEventListener('input', refreshProyHint);
-    refreshProyHint();
     const recalcLiq = () => {
       const metId = $('vfMetodo').value;
       const met = PAY_METHODS.find(m => m.id === metId);
@@ -4835,32 +4867,38 @@ compute();
       const met = PAY_METHODS.find(m => m.id === metId);
       const isInmediato = met && met.days === 0;
       const cobrado = isInmediato;
-      const proyectoId = $('vfProy').value;
+      const numeroVenta = parseInt($('vfDesc').value) || 0;
+      if (numeroVenta <= 0) { toast('El N° de venta debe ser mayor a 0'); return; }
+      const monto = parseFloat($('vfMonto').value) || 0;
+      if (monto <= 0) { toast('El monto debe ser mayor a 0'); return; }
       const cantidadVendida = Math.max(1, parseInt($('vfCantidad').value) || 1);
       const comisOv = $('vfComisOverrideChk').checked ? parseFloat($('vfComisOverride').value) : null;
+      if (comisOv != null && (!isFinite(comisOv) || comisOv <= 0)) { toast('La comisión debe ser mayor a 0'); return; }
+      const proyectos = window.vxVentaProys.filter(p => p.proyectoId).map(p => ({ proyectoId: p.proyectoId, cantidad: Math.max(1, parseInt(p.cantidad) || 1) }));
       const data = {
         id: uid(),
         fecha: $('vfFecha').value || todayISO(),
-        descripcion: $('vfDesc').value,
-        monto: parseFloat($('vfMonto').value) || 0,
+        numeroVenta,
+        descripcion: '#' + numeroVenta,
+        monto,
         metodoPago: metId,
         metodoPagoLabel: met ? met.name : '',
         cobrado,
         fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
-        proyectoId,
+        proyectos,
+        proyectoId: proyectos[0] ? proyectos[0].proyectoId : null,   // compat
         cantidadVendida,
-        comisionOverride: (comisOv != null && isFinite(comisOv)) ? comisOv : null,
+        comisionOverride: (comisOv != null && isFinite(comisOv) && comisOv > 0) ? comisOv : null,
         createdAt: Date.now(),
       };
       store.sales.push(data); saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', data.id, data); } catch(e){} }
-      // Deduct inventory if project linked
+      // Deduct inventory por cada proyecto de la lista
       let deducted = 0;
-      if (proyectoId) {
-        const res = await deductInventoryFromProject(proyectoId, cantidadVendida);
-        deducted = res.changed;
-        // Mark project as vendido if it wasn't
-        const p = store.projects.find(x => x.id === proyectoId);
+      for (const item of proyectos) {
+        const res = await deductInventoryFromProject(item.proyectoId, item.cantidad);
+        deducted += res.changed;
+        const p = store.projects.find(x => x.id === item.proyectoId);
         if (p && p.estado !== 'vendido') {
           p.estado = 'vendido';
           if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('projects', p.id, p); } catch(e){} }
@@ -5196,13 +5234,28 @@ compute();
     const v = store.sales.find(x => x.id === id);
     if (!v) return;
     openModal(ventaForm(), true);
-    // Prefill fields
-    const projSel = $('vfProy'); if (projSel) projSel.value = v.proyectoId || '';
+    // Prefill fields (con compatibilidad hacia atrás)
     $('vfCantidad').value = v.cantidadVendida || 1;
     $('vfFecha').value = v.fecha || todayISO();
     $('vfMonto').value = v.monto || 0;
-    $('vfDesc').value = v.descripcion || '';
+    // N° de venta: usar numeroVenta si existe, sino extraer número de la descripcion legacy
+    let numVenta = v.numeroVenta;
+    if (!numVenta && v.descripcion) {
+      const m = String(v.descripcion).match(/\d+/);
+      if (m) numVenta = parseInt(m[0]);
+    }
+    $('vfDesc').value = numVenta || '';
     $('vfMetodo').value = v.metodoPago || 'efectivo';
+    // Cargar proyectos (soporta legacy proyectoId + cantidadVendida)
+    if (v.proyectos && Array.isArray(v.proyectos) && v.proyectos.length > 0) {
+      window.vxVentaProys = v.proyectos.map(p => ({ proyectoId: p.proyectoId, cantidad: p.cantidad || 1 }));
+    } else if (v.proyectoId) {
+      window.vxVentaProys = [{ proyectoId: v.proyectoId, cantidad: v.cantidadVendida || 1 }];
+    } else {
+      window.vxVentaProys = [];
+    }
+    renderVentaProys();
+    $('vfAddProy').onclick = () => { window.vxVentaProys.push({ proyectoId: '', cantidad: 1 }); renderVentaProys(); };
     if (v.fechaLiquidacion) { const wrap = $('vfLiqWrap'); if (wrap) { wrap.style.display = ''; $('vfLiq').value = v.fechaLiquidacion; } }
     // Prefill comisión override
     if (v.comisionOverride != null && v.comisionOverride !== '') {
@@ -5229,18 +5282,26 @@ compute();
     $('vfSave').onclick = async () => {
       const met = PAY_METHODS.find(m => m.id === $('vfMetodo').value);
       const cobrado = met && met.days === 0 ? true : v.cobrado;
+      const numeroVenta = parseInt($('vfDesc').value) || 0;
+      if (numeroVenta <= 0) { toast('El N° de venta debe ser mayor a 0'); return; }
+      const monto = parseFloat($('vfMonto').value) || 0;
+      if (monto <= 0) { toast('El monto debe ser mayor a 0'); return; }
       const comisOv = $('vfComisOverrideChk').checked ? parseFloat($('vfComisOverride').value) : null;
+      if (comisOv != null && (!isFinite(comisOv) || comisOv <= 0)) { toast('La comisión debe ser mayor a 0'); return; }
+      const proyectos = window.vxVentaProys.filter(p => p.proyectoId).map(p => ({ proyectoId: p.proyectoId, cantidad: Math.max(1, parseInt(p.cantidad) || 1) }));
       Object.assign(v, {
-        proyectoId: $('vfProy').value,
+        proyectos,
+        proyectoId: proyectos[0] ? proyectos[0].proyectoId : null,
         cantidadVendida: Math.max(1, parseInt($('vfCantidad').value) || 1),
         fecha: $('vfFecha').value || todayISO(),
-        descripcion: $('vfDesc').value,
-        monto: parseFloat($('vfMonto').value) || 0,
+        numeroVenta,
+        descripcion: '#' + numeroVenta,
+        monto,
         metodoPago: $('vfMetodo').value,
         metodoPagoLabel: met ? met.name : '',
         cobrado,
         fechaLiquidacion: cobrado ? '' : ($('vfLiq').value || ''),
-        comisionOverride: (comisOv != null && isFinite(comisOv)) ? comisOv : null,
+        comisionOverride: (comisOv != null && isFinite(comisOv) && comisOv > 0) ? comisOv : null,
       });
       saveLocal();
       if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('sales', v.id, v); } catch(e){} }
