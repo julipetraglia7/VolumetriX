@@ -2524,7 +2524,9 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <div class="sub">Gestioná tus ventas, gastos y análisis financiero.</div>
         </div>
         <div style="display:flex; gap:8px;">
+          <button class="btn" id="btnImportTN">📥 Importar Tienda Nube (CSV)</button>
           <button class="btn" id="cntSaldoInit">💼 Saldo inicial</button>
+          <input type="file" id="fileImportTN" accept=".csv,text/csv" style="display:none;">
         </div>
       </div>
 
@@ -4857,6 +4859,241 @@ compute();
       };
     }
   }
+
+  /* ================= Import CSV de Tienda Nube ================= */
+  // Parser CSV simple con soporte de comillas y comas dentro de valores.
+  function parseCSV(text){
+    // Detectar delimitador: coma o punto y coma
+    const firstLine = text.split(/\r?\n/, 1)[0] || '';
+    const delim = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+    const rows = [];
+    let row = [], cell = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i], n = text[i+1];
+      if (inQuotes) {
+        if (c === '"' && n === '"') { cell += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else { cell += c; }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === delim) { row.push(cell); cell = ''; }
+        else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+        else if (c === '\r') { /* skip */ }
+        else cell += c;
+      }
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(r => r.some(v => (v || '').trim() !== ''));
+  }
+  function normHeader(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function findCol(headers, ...aliases){
+    const norm = headers.map(normHeader);
+    for (const alias of aliases) {
+      const target = normHeader(alias);
+      // Exact match
+      let i = norm.indexOf(target);
+      if (i >= 0) return i;
+      // Contains match
+      i = norm.findIndex(h => h.includes(target));
+      if (i >= 0) return i;
+    }
+    return -1;
+  }
+  function parseNumberAR(s){
+    if (s == null) return NaN;
+    let str = String(s).trim().replace(/[^\d,.\-]/g, '');
+    if (str === '' || str === '-') return NaN;
+    // Formato AR: "1.234,56" — puntos como miles, coma como decimal
+    // Formato EN: "1,234.56" — comas como miles, punto como decimal
+    const hasComma = str.includes(','), hasDot = str.includes('.');
+    if (hasComma && hasDot) {
+      // El separador decimal es el que aparece último
+      if (str.lastIndexOf(',') > str.lastIndexOf('.')) str = str.replace(/\./g, '').replace(',', '.');
+      else str = str.replace(/,/g, '');
+    } else if (hasComma) {
+      // Solo coma: puede ser decimal (AR) o miles (raro). Asumir decimal si hay 1-2 dígitos después.
+      const parts = str.split(',');
+      if (parts.length === 2 && parts[1].length <= 2) str = parts[0] + '.' + parts[1];
+      else str = str.replace(/,/g, '');
+    }
+    return parseFloat(str);
+  }
+  function parseDateISO(s){
+    if (!s) return todayISO();
+    s = String(s).trim();
+    // ISO ya (YYYY-MM-DD ...)
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return iso[0];
+    // DD/MM/YYYY o DD-MM-YYYY
+    const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (dmy) {
+      let y = dmy[3]; if (y.length === 2) y = '20' + y;
+      return `${y}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+    }
+    return todayISO();
+  }
+  function detectPayMethod(raw){
+    const s = normHeader(raw);
+    // Tienda Nube
+    if (s.includes('pago nube') || s.includes('nube pay') || s.includes('pagonube')) {
+      if (s.includes('transferencia') || s.includes('deposito') || s.includes('debito')) return 'tn_transferencia';
+      return 'tn_tarjeta';
+    }
+    if (s.includes('tienda nube') || s.includes('tiendanube')) {
+      if (s.includes('transferencia') || s.includes('deposito')) return 'tn_transferencia';
+      return 'tn_tarjeta';
+    }
+    // Mercado Pago
+    if (s.includes('mercado pago') || s.includes('mercadopago') || s === 'mp') {
+      if (s.includes('cuenta') || s.includes('dinero')) return 'mp_transferencia';
+      return 'mp_tarjeta';
+    }
+    // Efectivo / Transferencia directa
+    if (s.includes('efectivo') || s.includes('cash')) return 'efectivo';
+    if (s.includes('transferencia') || s.includes('bank')) return 'transferencia';
+    return 'otro';
+  }
+
+  function importTNCSV(text){
+    const rows = parseCSV(text);
+    if (rows.length < 2) { toast('CSV vacío o sin datos'); return; }
+    const headers = rows[0];
+    const iOrden  = findCol(headers, 'numero de orden', 'orden', 'order id', 'order number', 'number', 'order');
+    const iFecha  = findCol(headers, 'fecha de venta', 'fecha', 'created at', 'date', 'fecha de pago');
+    const iTotal  = findCol(headers, 'total', 'total pagado', 'monto total', 'grand total');
+    const iMetodo = findCol(headers, 'metodo de pago', 'payment method', 'gateway', 'medio de pago');
+    const iCosto  = findCol(headers, 'costo de procesamiento', 'costo procesamiento', 'processing cost', 'costo pagonube', 'fee');
+    const iCliente = findCol(headers, 'cliente', 'customer', 'nombre del cliente', 'nombre cliente');
+    const iEstadoPago = findCol(headers, 'estado del pago', 'estado pago', 'payment status');
+    const iProducto = findCol(headers, 'productos', 'items', 'product');
+
+    if (iTotal < 0 || iFecha < 0) {
+      toast('CSV no reconocido — faltan columnas de fecha o total');
+      return;
+    }
+
+    // Deduplicar por número de orden
+    const existingOrders = new Set(store.sales.map(s => s.orderNumber).filter(Boolean));
+
+    const parsed = [];
+    for (let r = 1; r < rows.length; r++) {
+      const cells = rows[r];
+      if (!cells || cells.length === 0) continue;
+      const total = parseNumberAR(cells[iTotal]);
+      if (!isFinite(total) || total <= 0) continue;
+      const orden = iOrden >= 0 ? String(cells[iOrden] || '').trim() : '';
+      // Si el CSV tiene múltiples filas por orden (una por producto), saltear duplicadas
+      if (orden && parsed.some(p => p.orderNumber === orden)) continue;
+      const metodoRaw = iMetodo >= 0 ? cells[iMetodo] || '' : '';
+      const metodo = detectPayMethod(metodoRaw);
+      const met = PAY_METHODS.find(m => m.id === metodo);
+      const fecha = parseDateISO(iFecha >= 0 ? cells[iFecha] : '');
+      const costo = iCosto >= 0 ? parseNumberAR(cells[iCosto]) : NaN;
+      const cliente = iCliente >= 0 ? String(cells[iCliente] || '').trim() : '';
+      const productos = iProducto >= 0 ? String(cells[iProducto] || '').trim() : '';
+      const estado = iEstadoPago >= 0 ? String(cells[iEstadoPago] || '').trim() : '';
+      const desc = [orden ? '#' + orden : '', cliente, productos].filter(Boolean).join(' — ');
+      const already = orden && existingOrders.has(orden);
+      parsed.push({
+        include: !already,
+        already,
+        orderNumber: orden,
+        fecha,
+        descripcion: desc || 'Venta importada',
+        monto: total,
+        metodoPago: metodo,
+        metodoPagoLabel: met ? met.name : metodoRaw,
+        comisionOverride: isFinite(costo) && costo > 0 ? Math.abs(costo) : null,
+        estadoPago: estado,
+      });
+    }
+    if (parsed.length === 0) { toast('No se detectaron órdenes válidas'); return; }
+    openImportPreviewModal(parsed);
+  }
+
+  function openImportPreviewModal(items){
+    const nuevas = items.filter(x => !x.already).length;
+    const duplicadas = items.filter(x => x.already).length;
+    const html = `<h3>Importar ventas de Tienda Nube</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">
+        Detectamos <b>${items.length}</b> orden${items.length!==1?'es':''} en el CSV. Nuevas: <b style="color:#6ee7a7;">${nuevas}</b>. Ya cargadas: <b style="color:var(--text-faint);">${duplicadas}</b>.
+      </p>
+      <div style="max-height:340px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">
+        <table class="simple" style="font-size:12px;">
+          <thead><tr>
+            <th style="padding:6px;"><input type="checkbox" id="impChkAll" ${nuevas>0?'checked':''}></th>
+            <th>Orden</th><th>Fecha</th><th>Método</th><th style="text-align:right;">Monto</th><th style="text-align:right;">Comis.</th>
+          </tr></thead>
+          <tbody>
+            ${items.map((it, i) => `<tr style="${it.already?'opacity:.4;':''}">
+              <td style="padding:6px;"><input type="checkbox" data-imp="${i}" ${it.include?'checked':''} ${it.already?'disabled':''}></td>
+              <td>${esc(it.orderNumber || '—')}${it.already?' <span class="badge badge-draft">ya cargada</span>':''}</td>
+              <td class="num">${esc(it.fecha)}</td>
+              <td>${esc(it.metodoPagoLabel)}</td>
+              <td class="num" style="text-align:right;">${fmtMoney(it.monto)}</td>
+              <td class="num" style="text-align:right; color:var(--accent-magenta);">${it.comisionOverride != null ? '-' + fmtMoney(it.comisionOverride) : '<span style="color:var(--text-faint);">auto</span>'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11.5px; color:var(--text-faint); margin-top:8px;">
+        Si el CSV incluye "Costo de procesamiento" usamos ese valor exacto. Si no, se calcula por % del método.
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn primary" id="impConfirm">Importar seleccionadas</button>
+      </div>`;
+    openModal(html, true);
+    // Select all
+    $('impChkAll').addEventListener('change', e => {
+      document.querySelectorAll('[data-imp]').forEach(c => { if (!c.disabled) c.checked = e.target.checked; });
+    });
+    $('impConfirm').onclick = async () => {
+      const sel = Array.from(document.querySelectorAll('[data-imp]:checked')).map(c => +c.dataset.imp);
+      let added = 0;
+      for (const idx of sel) {
+        const it = items[idx];
+        const met = PAY_METHODS.find(m => m.id === it.metodoPago);
+        const isImmediate = met && met.days === 0;
+        // Si el CSV dice pagado, o el método es inmediato → cobrado
+        const cobrado = isImmediate || /pagad|paid|aprobad|approved/i.test(it.estadoPago || '');
+        const fechaLiquidacion = (!cobrado && met && met.days) ? addDaysISO(it.fecha, met.days) : '';
+        const data = {
+          id: uid(),
+          orderNumber: it.orderNumber || null,
+          fecha: it.fecha,
+          descripcion: it.descripcion,
+          monto: it.monto,
+          metodoPago: it.metodoPago,
+          metodoPagoLabel: met ? met.name : it.metodoPagoLabel,
+          cobrado,
+          fechaLiquidacion,
+          comisionOverride: it.comisionOverride,
+          createdAt: Date.now(),
+        };
+        store.sales.push(data);
+        if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+          try { await window.cloudSync.saveDoc('sales', data.id, data); } catch(e){}
+        }
+        added++;
+      }
+      saveLocal();
+      autoReleaseSales();
+      closeModal();
+      renderContabilidad(); renderDashboard();
+      toast(`Importadas ${added} ventas ✓`);
+    };
+  }
+
+  $('btnImportTN').onclick = () => $('fileImportTN').click();
+  $('fileImportTN').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { try { importTNCSV(rd.result); } catch(err) { console.error(err); toast('Error leyendo CSV'); } };
+    rd.onerror = () => toast('Error abriendo el archivo');
+    rd.readAsText(f, 'UTF-8');
+    e.target.value = ''; // permite re-importar el mismo archivo
+  };
 
   $('cntSaldoInit').onclick = () => {
     const val = prompt('Saldo inicial (ARS):', String(store.settings.saldoInicial || 0));
