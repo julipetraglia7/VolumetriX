@@ -2532,30 +2532,30 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
 
       <!-- KPI grid (6 tiles: 3 arriba, 3 abajo. Click para ver detalle) -->
       <div class="stat-grid vx-clickable" id="cntKpis">
-        <div class="stat-tile" data-a="green" data-kpi="cobrado" title="Suma de todas las ventas ya cobradas. Click para ver detalle.">
+        <div class="stat-tile" data-a="green" data-kpi="cobrado" title="Ingresos ya cobrados con las comisiones de TN/MP descontadas — es lo que efectivamente entró a tu cuenta.">
           <div class="top"><span class="label">Ingresos cobrados</span></div>
           <span class="value" id="kpiCobrado">$0</span>
-          <span class="foot">Plata que ya entró</span>
+          <span class="foot">Ya neto de comisiones</span>
         </div>
-        <div class="stat-tile" data-a="yellow" data-kpi="pendiente" title="Ventas pendientes cuya fecha de liberación aún no llegó. Click para ver detalle.">
+        <div class="stat-tile" data-a="yellow" data-kpi="pendiente" title="Ventas pendientes cuya fecha de liberación aún no llegó, ya con comisión descontada.">
           <div class="top"><span class="label">Pendiente de cobro</span></div>
           <span class="value" id="kpiPendiente">$0</span>
-          <span class="foot">Ventas por liberarse</span>
+          <span class="foot">Neto por liberarse</span>
         </div>
         <div class="stat-tile" data-a="orange" data-kpi="gastos" title="Suma de todos los gastos registrados. Click para ver detalle.">
           <div class="top"><span class="label">Gastos totales</span></div>
           <span class="value" id="kpiGastos">$0</span>
           <span class="foot">Plata que salió</span>
         </div>
-        <div class="stat-tile" data-a="magenta" data-kpi="comisiones" title="Comisiones automáticas de Tienda Nube (~7.05%) y Mercado Pago (~6.30%) sobre las ventas ya cobradas.">
+        <div class="stat-tile" data-a="magenta" data-kpi="comisiones" title="Ya está descontado de Ingresos cobrados. Solo informativo para ver cuánto se llevan las plataformas.">
           <div class="top"><span class="label">Comisiones plataforma</span></div>
           <span class="value" id="kpiComisPlat">$0</span>
-          <span class="foot">TN + MP se quedan</span>
+          <span class="foot">Solo informativo (ya descontado)</span>
         </div>
-        <div class="stat-tile" data-a="violet" data-kpi="ganancia" title="Saldo inicial + ingresos cobrados − gastos − comisiones. Click para ver detalle.">
+        <div class="stat-tile" data-a="violet" data-kpi="ganancia" title="Saldo inicial + ingresos netos − gastos. Click para ver detalle.">
           <div class="top"><span class="label">Ganancia real</span></div>
           <span class="value" id="kpiBeneficio">$0</span>
-          <span class="foot">Cobrado − gastos + saldo</span>
+          <span class="foot">Ingresos netos − gastos + saldo</span>
         </div>
         <div class="stat-tile" data-a="cyan" data-kpi="saldo" title="Plata con la que arrancaste.">
           <div class="top"><span class="label">Saldo inicial</span></div>
@@ -4410,12 +4410,16 @@ compute();
   }
   function renderContabilidad(){
     autoReleaseSales();
-    const cobrado = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + (Number(v.monto)||0), 0);
-    const pendiente = store.sales.filter(s => s.cobrado === false).reduce((s, v) => s + (Number(v.monto)||0), 0);
+    // BRUTO cobrado: lo que pagó el cliente
+    const cobradoBruto = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + (Number(v.monto)||0), 0);
     const comisionesPlataforma = store.sales.filter(s => s.cobrado !== false).reduce((s, v) => s + feeForSale(v), 0);
+    // NETO cobrado: lo que realmente te entra (bruto − comisiones que TN/MP se quedaron)
+    const cobrado = cobradoBruto - comisionesPlataforma;
+    const pendiente = store.sales.filter(s => s.cobrado === false).reduce((s, v) => s + ((Number(v.monto)||0) - feeForSale(v)), 0);
     const gastos = store.expenses.reduce((s, v) => s + (Number(v.monto)||0), 0);
     const saldoInicial = Number(store.settings.saldoInicial) || 0;
-    const beneficio = saldoInicial + cobrado - gastos - comisionesPlataforma;
+    // Comisiones ya están descontadas en cobrado, no se restan de nuevo
+    const beneficio = saldoInicial + cobrado - gastos;
     // Margen promedio: solo cuenta ventas asociadas a un proyecto con costo real (> 0)
     let totMargen = 0, cnt = 0;
     store.sales.forEach(s => {
@@ -4439,7 +4443,7 @@ compute();
     $('kpiSaldo').textContent = fmtMoney(saldoInicial);
 
     // Guardar valores para el modal detalle
-    window.vxKpiData = { cobrado, pendiente, gastos, comisionesPlataforma, beneficio, saldoInicial };
+    window.vxKpiData = { cobrado, cobradoBruto, pendiente, gastos, comisionesPlataforma, beneficio, saldoInicial };
 
     renderContabilidadTab();
   }
@@ -4832,11 +4836,11 @@ compute();
   function openKpiDetail(kpi){
     const d = window.vxKpiData || {};
     const map = {
-      cobrado: { title: 'Ingresos cobrados', color: '#6ee7a7', value: d.cobrado || 0, formula: 'Suma de todas las ventas ya cobradas (o auto-liberadas por fecha).' },
-      pendiente: { title: 'Pendiente de cobro', color: 'var(--accent-yellow)', value: d.pendiente || 0, formula: 'Suma de ventas cuyo modo de pago las difiere y aún no llegó su fecha de liberación.' },
+      cobrado: { title: 'Ingresos cobrados (neto)', color: '#6ee7a7', value: d.cobrado || 0, formula: `Ventas cobradas ya descontando lo que se quedaron TN/MP.<br>Bruto: <b>${fmtMoney(d.cobradoBruto||0)}</b> − Comisiones: <b>${fmtMoney(d.comisionesPlataforma||0)}</b> = <b>${fmtMoney(d.cobrado||0)}</b>` },
+      pendiente: { title: 'Pendiente de cobro (neto)', color: 'var(--accent-yellow)', value: d.pendiente || 0, formula: 'Ventas cuya fecha de liberación aún no llegó. También ya con comisiones descontadas para saber cuánto te va a entrar.' },
       gastos: { title: 'Gastos totales', color: 'var(--accent-orange)', value: d.gastos || 0, formula: 'Suma de todos los gastos registrados en la sección Gastos.' },
-      comisiones: { title: 'Comisiones plataforma', color: 'var(--accent-magenta)', value: d.comisionesPlataforma || 0, formula: 'Suma de comisiones por venta cobrada: <b>Tienda Nube 7.05%</b> · <b>Mercado Pago 6.30%</b>. Efectivo y Transferencia no descuentan.' },
-      ganancia: { title: 'Ganancia real', color: 'var(--accent-violet)', value: d.beneficio || 0, formula: `<b>${fmtMoney(d.saldoInicial||0)}</b> saldo + <b>${fmtMoney(d.cobrado||0)}</b> cobrado − <b>${fmtMoney(d.gastos||0)}</b> gastos − <b>${fmtMoney(d.comisionesPlataforma||0)}</b> comisiones = <b>${fmtMoney(d.beneficio||0)}</b>` },
+      comisiones: { title: 'Comisiones plataforma', color: 'var(--accent-magenta)', value: d.comisionesPlataforma || 0, formula: 'Lo que se quedaron Tienda Nube y Mercado Pago por procesar tus ventas cobradas. Ya está descontado del "Ingresos cobrados" — este card es solo informativo para que sepas cuánto le pagás a las plataformas.' },
+      ganancia: { title: 'Ganancia real', color: 'var(--accent-violet)', value: d.beneficio || 0, formula: `<b>${fmtMoney(d.saldoInicial||0)}</b> saldo + <b>${fmtMoney(d.cobrado||0)}</b> ingresos netos − <b>${fmtMoney(d.gastos||0)}</b> gastos = <b>${fmtMoney(d.beneficio||0)}</b>` },
       saldo: { title: 'Saldo inicial', color: 'var(--accent-cyan)', value: d.saldoInicial || 0, formula: 'Plata con la que arrancaste. Podés editarla desde este mismo modal.' },
     };
     const m = map[kpi]; if (!m) return;
