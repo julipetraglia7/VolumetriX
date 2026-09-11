@@ -4572,10 +4572,12 @@ compute();
   // Modals contabilidad
   // Payment methods → días hasta liquidación (0 = inmediato/cobrado)
   // fee = % que la plataforma se queda por transacción (tasa base + IVA).
-  //   Dentro de Pago Nube / Mercado Pago el % cambia según cómo pagó
-  //   el cliente: tarjeta de crédito vs transferencia/depósito.
+  //   Tienda Nube (Pago Nube):
   //     Tarjeta:       3.49% + 21% IVA = 4.2229%
   //     Transferencia: 1.50% + 21% IVA = 1.815%
+  //   Mercado Pago vía Tienda Nube (pasarela de terceros):
+  //     Tarjeta:       4.30% cargo MP + 2% "uso de plataforma" = 6.30%
+  //     Dinero en cuenta: 0% (no cobra fee al vendedor por saldo MP)
   //   Las cuotas y retenciones aparecen a veces — usar el checkbox
   //   "Cargar comisión real" en esos casos.
   const PAY_METHODS = [
@@ -4583,7 +4585,7 @@ compute();
     { id: 'transferencia',   name: 'Transferencia bancaria directa',      days: 0,   fee: 0 },
     { id: 'tn_tarjeta',      name: 'Tienda Nube — Tarjeta',               days: 14,  fee: 4.2229 },
     { id: 'tn_transferencia',name: 'Tienda Nube — Transferencia/Depósito', days: 14,  fee: 1.815 },
-    { id: 'mp_tarjeta',      name: 'Mercado Pago — Tarjeta',              days: 18,  fee: 4.30 },
+    { id: 'mp_tarjeta',      name: 'Mercado Pago — Tarjeta',              days: 18,  fee: 6.30 },
     { id: 'mp_transferencia',name: 'Mercado Pago — Dinero en cuenta',     days: 0,   fee: 0 },
     { id: 'otro',            name: 'Otro (definir manual)',               days: null, fee: 0 },
   ];
