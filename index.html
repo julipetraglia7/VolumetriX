@@ -4542,10 +4542,23 @@ compute();
       return;
     }
     if (cntTab === 'gastos') {
-      const exps = [...store.expenses].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      const sortState = window.vxGastosSort || { field: 'fecha', dir: 'desc' };
+      window.vxGastosSort = sortState;
+      const exps = [...store.expenses].sort((a, b) => {
+        const f = sortState.field;
+        let av, bv;
+        if (f === 'monto') { av = Number(a.monto)||0; bv = Number(b.monto)||0; }
+        else if (f === 'descripcion') { av = (a.descripcion||'').toLowerCase(); bv = (b.descripcion||'').toLowerCase(); }
+        else if (f === 'categoria') { av = (a.categoria||'').toLowerCase(); bv = (b.categoria||'').toLowerCase(); }
+        else /* fecha */ { av = a.fecha || ''; bv = b.fecha || ''; }
+        const cmp = av < bv ? -1 : av > bv ? 1 : ((a.createdAt||0) - (b.createdAt||0));
+        return sortState.dir === 'asc' ? cmp : -cmp;
+      });
       if (exps.length === 0) { body.innerHTML = emptyStateHTML('Sin gastos', 'Presioná "Registrar gasto" para cargar el primero.', '🧾', true); return; }
+      const arrow = (field) => sortState.field === field ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const sTh = (field, label, extra='') => `<th style="cursor:pointer; user-select:none;${extra}" data-sort-gastos="${field}">${esc(label)}<span style="color:var(--accent-magenta);">${arrow(field)}</span></th>`;
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <thead><tr>${sTh('fecha','Fecha')}${sTh('descripcion','Descripción')}${sTh('categoria','Categoría')}${sTh('monto','Monto','text-align:right;')}<th></th></tr></thead>
         <tbody>${exps.map(v => `<tr>
           <td class="num">${esc(v.fecha || todayISO())}</td>
           <td>${esc(v.descripcion || '')}</td>
@@ -4558,13 +4571,34 @@ compute();
         </tr>`).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-exp-del]').forEach(b => b.onclick = e => deleteFin('expenses', e.currentTarget.dataset.expDel));
       body.querySelectorAll('[data-exp-edit]').forEach(b => b.onclick = e => editExpense(e.currentTarget.dataset.expEdit));
+      body.querySelectorAll('th[data-sort-gastos]').forEach(th => th.onclick = e => {
+        const field = e.currentTarget.dataset.sortGastos;
+        const s = window.vxGastosSort;
+        if (s.field === field) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+        else { s.field = field; s.dir = field === 'monto' ? 'desc' : 'asc'; }
+        renderContabilidadTab();
+      });
       return;
     }
     if (cntTab === 'presupuestos') {
-      const items = [...store.presupuestos].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      const sortState = window.vxPresSort || { field: 'fecha', dir: 'desc' };
+      window.vxPresSort = sortState;
+      const items = [...store.presupuestos].sort((a, b) => {
+        const f = sortState.field;
+        let av, bv;
+        if (f === 'monto') { av = Number(a.monto)||0; bv = Number(b.monto)||0; }
+        else if (f === 'cliente') { av = (a.cliente||'').toLowerCase(); bv = (b.cliente||'').toLowerCase(); }
+        else if (f === 'descripcion') { av = (a.descripcion||'').toLowerCase(); bv = (b.descripcion||'').toLowerCase(); }
+        else if (f === 'estado') { av = a.estado || ''; bv = b.estado || ''; }
+        else /* fecha */ { av = a.fecha || ''; bv = b.fecha || ''; }
+        const cmp = av < bv ? -1 : av > bv ? 1 : ((a.createdAt||0) - (b.createdAt||0));
+        return sortState.dir === 'asc' ? cmp : -cmp;
+      });
       if (items.length === 0) { body.innerHTML = emptyStateHTML('Sin presupuestos', 'Presioná "Nuevo presupuesto" para crear uno.', '📄', true); return; }
+      const arrow = (field) => sortState.field === field ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const sTh = (field, label, extra='') => `<th style="cursor:pointer; user-select:none;${extra}" data-sort-pres="${field}">${esc(label)}<span style="color:var(--accent-magenta);">${arrow(field)}</span></th>`;
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr><th>Fecha</th><th>Cliente</th><th>Descripción</th><th>Estado</th><th style="text-align:right;">Monto</th><th></th></tr></thead>
+        <thead><tr>${sTh('fecha','Fecha')}${sTh('cliente','Cliente')}${sTh('descripcion','Descripción')}${sTh('estado','Estado')}${sTh('monto','Monto','text-align:right;')}<th></th></tr></thead>
         <tbody>${items.map(v => `<tr>
           <td class="num">${esc(v.fecha)}</td>
           <td>${esc(v.cliente || '')}</td>
@@ -4581,6 +4615,13 @@ compute();
       body.querySelectorAll('[data-pres-rej]').forEach(b => b.onclick = e => updatePresupuestoEstado(e.currentTarget.dataset.presRej, 'rechazado'));
       body.querySelectorAll('[data-pres-del]').forEach(b => b.onclick = e => deletePresupuesto(e.currentTarget.dataset.presDel));
       body.querySelectorAll('[data-pres-edit]').forEach(b => b.onclick = e => editPresupuesto(e.currentTarget.dataset.presEdit));
+      body.querySelectorAll('th[data-sort-pres]').forEach(th => th.onclick = e => {
+        const field = e.currentTarget.dataset.sortPres;
+        const s = window.vxPresSort;
+        if (s.field === field) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+        else { s.field = field; s.dir = field === 'monto' ? 'desc' : 'asc'; }
+        renderContabilidadTab();
+      });
     }
   }
   $('cntTabs').addEventListener('click', e => {
