@@ -4477,10 +4477,24 @@ compute();
       return;
     }
     if (cntTab === 'ventas') {
-      const sales = [...store.sales].sort((a,b) => (b.createdAt||0)-(a.createdAt||0));
+      // Sort configurable
+      const sortState = window.vxSalesSort || { field: 'fecha', dir: 'desc' };
+      window.vxSalesSort = sortState;
+      const sales = [...store.sales].sort((a, b) => {
+        const f = sortState.field;
+        let av, bv;
+        if (f === 'monto') { av = Number(a.monto)||0; bv = Number(b.monto)||0; }
+        else if (f === 'descripcion') { av = (a.descripcion||'').toLowerCase(); bv = (b.descripcion||'').toLowerCase(); }
+        else /* fecha */ { av = a.fecha || ''; bv = b.fecha || ''; }
+        const cmp = av < bv ? -1 : av > bv ? 1 : ((a.createdAt||0) - (b.createdAt||0));
+        return sortState.dir === 'asc' ? cmp : -cmp;
+      });
+      const arrow = (field) => sortState.field === field ? (sortState.dir === 'asc' ? ' ▲' : ' ▼') : '';
+      const thStyle = 'cursor:pointer; user-select:none;';
+      const sortableTh = (field, label, extra='') => `<th style="${thStyle}${extra}" data-sort="${field}">${esc(label)}<span style="color:var(--accent-magenta);">${arrow(field)}</span></th>`;
       if (sales.length === 0) { body.innerHTML = emptyStateHTML('Sin ventas', 'Presioná "Crear venta" para registrar la primera.', '💰', true); return; }
       body.innerHTML = `<div class="card" style="padding:14px;"><table class="simple">
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Modo de pago</th><th>Estado</th><th>Se libera</th><th style="text-align:right;">Monto</th><th style="text-align:right;">Comisión</th><th style="text-align:right;">Neto</th><th></th></tr></thead>
+        <thead><tr>${sortableTh('fecha','Fecha')}${sortableTh('descripcion','Descripción')}<th>Modo de pago</th><th>Estado</th><th>Se libera</th>${sortableTh('monto','Monto','text-align:right;')}<th style="text-align:right;">Comisión</th><th style="text-align:right;">Neto</th><th></th></tr></thead>
         <tbody>${sales.map(v => {
           let liqCell = '—';
           if (v.cobrado === false && v.fechaLiquidacion) {
@@ -4510,6 +4524,13 @@ compute();
         }).join('')}</tbody></table></div>`;
       body.querySelectorAll('[data-sale-del]').forEach(b => b.onclick = e => deleteFin('sales', e.currentTarget.dataset.saleDel));
       body.querySelectorAll('[data-sale-edit]').forEach(b => b.onclick = e => editSale(e.currentTarget.dataset.saleEdit));
+      body.querySelectorAll('th[data-sort]').forEach(th => th.onclick = e => {
+        const field = e.currentTarget.dataset.sort;
+        const s = window.vxSalesSort;
+        if (s.field === field) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+        else { s.field = field; s.dir = field === 'monto' ? 'desc' : 'asc'; }
+        renderContabilidadTab();
+      });
       body.querySelectorAll('[data-sale-cobrar]').forEach(b => b.onclick = async e => {
         const id = e.currentTarget.dataset.saleCobrar;
         const s = store.sales.find(x => x.id === id); if (!s) return;
