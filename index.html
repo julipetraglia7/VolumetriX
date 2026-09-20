@@ -4061,6 +4061,7 @@ compute();
         <span class="inv-stock ${low ? 'low' : ''}">${(m.stock || 0).toLocaleString('es-AR')} ${esc(m.unidad || 'g')}</span>
         <span class="inv-price">${m.category === 'Filamento' ? `${fmtMoney(m.pricePerKg || (m.pricePerUnit || 0) * 1000)}/kg` : `${fmtMoney(m.pricePerUnit || m.pricePerKg || 0)}/${esc(m.unidad || 'u')}`}</span>
         <div class="inv-actions">
+          <button class="icon-btn" data-inv-move="${esc(m.id)}" title="Ajustar stock (± o historial)" style="color:var(--accent-magenta);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
           <button class="icon-btn" data-inv-edit="${esc(m.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-btn danger" data-inv-del="${esc(m.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
@@ -4068,6 +4069,7 @@ compute();
     }).join('');
     body.querySelectorAll('[data-inv-edit]').forEach(b => b.onclick = e => editInventoryItem(e.currentTarget.dataset.invEdit));
     body.querySelectorAll('[data-inv-del]').forEach(b => b.onclick = e => deleteInventoryItem(e.currentTarget.dataset.invDel));
+    body.querySelectorAll('[data-inv-move]').forEach(b => b.onclick = e => openStockAdjustModal(e.currentTarget.dataset.invMove));
   }
   function tabMatches(x){
     if (invTab === 'materiales') return ['Filamento','Insumos','Packaging','Resina','Otro'].indexOf(x.category) > -1;
@@ -4118,11 +4120,37 @@ compute();
   const PACKAGING_SUBTIPOS = ['Caja','Viruta','Papel burbuja','Cinta scotch','Cinta frágil','Bolsa ecommerce','Etiqueta autoadhesiva','Otro'];
   const INSUMOS_SUBTIPOS = ['LED RGB','LED común','Batería','Interruptor','Cable','Imán','Resorte','Tornillería','Adhesivo','Otro'];
   const POSTPROC_SUBTIPOS = ['Pintura','Masilla','Pegamento','Resina','Lija','Otro'];
-  function subtiposFor(cat){
+  function baseSubtiposFor(cat){
     if (cat === 'Packaging') return PACKAGING_SUBTIPOS;
     if (cat === 'Insumos') return INSUMOS_SUBTIPOS;
     if (cat === 'Postprocesado') return POSTPROC_SUBTIPOS;
     return [];
+  }
+  function customSubtiposFor(cat){
+    const s = (store.settings && store.settings.customSubtipos) || {};
+    return Array.isArray(s[cat]) ? s[cat] : [];
+  }
+  function subtiposFor(cat){
+    // Combinar los "de fábrica" con los personalizados guardados por el usuario.
+    return [...baseSubtiposFor(cat), ...customSubtiposFor(cat)];
+  }
+  async function addCustomSubtipo(cat, name){
+    name = String(name || '').trim();
+    if (!name) return null;
+    if (subtiposFor(cat).some(s => s.toLowerCase() === name.toLowerCase())) {
+      toast('Ya existe ese subtipo');
+      return name;
+    }
+    if (!store.settings) store.settings = {};
+    if (!store.settings.customSubtipos) store.settings.customSubtipos = {};
+    if (!Array.isArray(store.settings.customSubtipos[cat])) store.settings.customSubtipos[cat] = [];
+    store.settings.customSubtipos[cat].push(name);
+    saveLocal();
+    if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+      try { await window.cloudSync.saveDoc('settings', 'app', store.settings); } catch(e){}
+    }
+    toast(`"${name}" agregado a ${cat} ✓`);
+    return name;
   }
   // ¿Este item mostrá el campo Nombre? Filamento y Producto sí (identificador libre).
   // Insumos, Packaging, Postprocesado usan subtipo (+ color/tamaño cuando aplica) como nombre.
@@ -4253,7 +4281,10 @@ compute();
       if (opts.length) {
         const sel = $('ifSubtipo');
         const cur = sel.value;
-        sel.innerHTML = '<option value="">— Seleccionar —</option>' + opts.map(s => `<option ${cur===s?'selected':''}>${esc(s)}</option>`).join('');
+        sel.innerHTML =
+          '<option value="">— Seleccionar —</option>' +
+          opts.map(s => `<option ${cur===s?'selected':''}>${esc(s)}</option>`).join('') +
+          '<option value="__add__">+ Agregar nuevo subtipo…</option>';
       }
       const currentSubtipo = $('ifSubtipo')?.value || '';
       const wantsTamano = usesTamano(cat, currentSubtipo);
@@ -4286,7 +4317,18 @@ compute();
       b.classList.add('on');
       refreshSubtipos();
     });
-    $('ifSubtipo')?.addEventListener('change', () => { refreshSubtipos(); });
+    $('ifSubtipo')?.addEventListener('change', async () => {
+      const sel = $('ifSubtipo');
+      if (sel.value === '__add__') {
+        const cat = document.querySelector('.seg-pick button[data-cat].on')?.dataset.cat || 'Packaging';
+        const nombre = prompt(`Nombre del nuevo subtipo de ${cat}:`);
+        if (!nombre || !nombre.trim()) { sel.value = ''; refreshSubtipos(); return; }
+        const added = await addCustomSubtipo(cat, nombre.trim());
+        refreshSubtipos();
+        if (added) sel.value = added;
+      }
+      refreshSubtipos();
+    });
     const ic = $('ifColor'), ih = $('ifColorHex');
     ic.oninput = () => ih.value = ic.value;
     ih.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(ih.value)) ic.value = ih.value; };
@@ -4360,6 +4402,97 @@ compute();
     openModal(inventoryForm(it), true);
     wireInventoryForm(it);
   }
+  // ============ Ajuste manual de stock (movimientos) ============
+  function openStockAdjustModal(id){
+    const it = store.inventory.find(x => x.id === id);
+    if (!it) return;
+    const moves = Array.isArray(it.movimientos) ? [...it.movimientos] : [];
+    // Ordenar de más nuevo a más viejo
+    moves.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.createdAt || 0) - (a.createdAt || 0));
+    const historyHTML = moves.length === 0
+      ? '<div style="padding:16px; text-align:center; color:var(--text-faint); font-size:12.5px;">Sin movimientos registrados aún.</div>'
+      : `<table class="simple" style="font-size:12px;">
+          <thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right;">Cant.</th><th style="text-align:right;">Stock</th><th>Motivo</th><th></th></tr></thead>
+          <tbody>${moves.map((m, i) => `<tr>
+            <td class="num">${esc(m.fecha || '')}</td>
+            <td><span class="badge" style="background:${m.tipo === 'ingreso' ? 'rgba(74,222,128,.15)' : 'rgba(239,68,68,.15)'}; color:${m.tipo === 'ingreso' ? '#6ee7a7' : '#fca5a5'};">${m.tipo === 'ingreso' ? '+ Ingreso' : '− Egreso'}</span></td>
+            <td class="num" style="text-align:right;">${(m.tipo === 'ingreso' ? '+' : '-')}${Number(m.cantidad || 0).toLocaleString('es-AR')} ${esc(it.unidad || '')}</td>
+            <td class="num" style="text-align:right;">${Number(m.stockDespues || 0).toLocaleString('es-AR')}</td>
+            <td>${esc(m.motivo || m.origen || '—')}</td>
+            <td style="text-align:right;"><button class="icon-btn danger" data-move-del="${esc(m.id)}" title="Revertir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button></td>
+          </tr>`).join('')}</tbody>
+        </table>`;
+
+    const html = `<h3>Ajustar stock — ${esc(it.name)}</h3>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; padding:8px 12px; background:var(--surface-2); border-radius:8px; margin-bottom:12px;">
+        <span style="font-size:12px; color:var(--text-muted);">Stock actual</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:700; color:var(--accent-yellow);">${Number(it.stock || 0).toLocaleString('es-AR')} ${esc(it.unidad || '')}</span>
+      </div>
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:6px 0; font-weight:600;">Nuevo movimiento</div>
+      <div class="field"><label>Tipo</label>
+        <div class="seg-pick">
+          <button data-mv-tipo="ingreso" class="on" style="color:#6ee7a7;">+ Ingreso (sumar)</button>
+          <button data-mv-tipo="egreso" style="color:#fca5a5;">− Egreso (descontar)</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Cantidad (${esc(it.unidad || 'u')}) *</label><input class="input num" type="number" min="0.01" step="0.01" id="mvCant" placeholder="Ej: 500"></div>
+        <div class="field"><label>Fecha</label><input class="input" type="date" id="mvFecha" value="${todayISO()}"></div>
+      </div>
+      <div class="field"><label>Motivo (opcional)</label><input class="input" id="mvMotivo" placeholder="Ej: Compra proveedor, ajuste inventario físico…"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-close>Cerrar</button>
+        <button class="btn primary" id="mvSave">Aplicar movimiento</button>
+      </div>
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:16px 0 6px; font-weight:600;">Historial</div>
+      <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">${historyHTML}</div>`;
+
+    openModal(html, true);
+
+    // Toggle tipo
+    document.querySelectorAll('[data-mv-tipo]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('[data-mv-tipo]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    });
+
+    $('mvSave').onclick = async () => {
+      const cant = parseFloat($('mvCant').value);
+      if (!isFinite(cant) || cant <= 0) { toast('La cantidad debe ser mayor a 0'); return; }
+      const tipoBtn = document.querySelector('[data-mv-tipo].on');
+      const tipo = tipoBtn ? tipoBtn.dataset.mvTipo : 'ingreso';
+      const fecha = $('mvFecha').value || todayISO();
+      const motivo = $('mvMotivo').value.trim();
+      const stockAntes = Number(it.stock || 0);
+      const delta = tipo === 'ingreso' ? cant : -cant;
+      const stockDespues = Math.max(0, stockAntes + delta);
+      if (!Array.isArray(it.movimientos)) it.movimientos = [];
+      it.movimientos.push({ id: uid(), fecha, tipo, cantidad: cant, motivo, stockAntes, stockDespues, createdAt: Date.now() });
+      it.stock = stockDespues;
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('inventory', it.id, it); } catch(e){} }
+      toast(`Stock ${tipo === 'ingreso' ? '+' : '-'}${cant} ${it.unidad || ''} ✓`);
+      openStockAdjustModal(id); // re-abrir con el historial actualizado
+      renderInventario();
+    };
+
+    // Revertir un movimiento
+    document.querySelectorAll('[data-move-del]').forEach(b => b.onclick = async e => {
+      const mvId = e.currentTarget.dataset.moveDel;
+      if (!confirm('¿Revertir este movimiento? Se restaurará el stock a como estaba.')) return;
+      const idx = it.movimientos.findIndex(m => m.id === mvId);
+      if (idx < 0) return;
+      const mv = it.movimientos[idx];
+      const delta = mv.tipo === 'ingreso' ? -mv.cantidad : mv.cantidad;
+      it.stock = Math.max(0, Number(it.stock || 0) + delta);
+      it.movimientos.splice(idx, 1);
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) { try { await window.cloudSync.saveDoc('inventory', it.id, it); } catch(e){} }
+      toast('Movimiento revertido');
+      openStockAdjustModal(id);
+      renderInventario();
+    });
+  }
+
   async function deleteInventoryItem(id){
     if (!confirm('¿Eliminar este item del inventario?')) return;
     store.inventory = store.inventory.filter(x => x.id !== id);
