@@ -2544,6 +2544,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
           <button class="btn" id="btnImportTN">📥 Importar Tienda Nube (CSV)</button>
           <button class="btn" id="cntSaldoInit">💼 Saldo inicial</button>
           <button class="btn danger" id="btnDelAllSales" title="Eliminar ventas en lote">🗑 Eliminar ventas</button>
+          <button class="btn danger" id="btnDelAllExpenses" title="Eliminar todos los gastos">🗑 Eliminar gastos</button>
           <input type="file" id="fileImportTN" accept=".csv,text/csv" style="display:none;">
         </div>
       </div>
@@ -5508,6 +5509,50 @@ compute();
       closeModal();
       renderContabilidad(); renderDashboard();
       toast(`${toDelete.length} venta${toDelete.length!==1?'s':''} eliminada${toDelete.length!==1?'s':''} ✓`);
+    };
+  };
+
+  $('btnDelAllExpenses').onclick = () => {
+    const total = store.expenses.length;
+    if (total === 0) { toast('No hay gastos para eliminar'); return; }
+    // Agrupación por categoría para mostrar de qué se trata
+    const porCategoria = {};
+    store.expenses.forEach(g => {
+      const c = g.categoria || 'Otros';
+      porCategoria[c] = (porCategoria[c] || 0) + 1;
+    });
+    const catList = Object.entries(porCategoria).map(([c, n]) => `<div style="display:flex; justify-content:space-between; padding:4px 0; font-size:12.5px;"><span style="color:var(--text-muted);">${esc(c)}</span><span style="font-family:'JetBrains Mono',monospace; color:var(--text);">${n}</span></div>`).join('');
+    const html = `<h3 style="color:#fca5a5;">🗑 Eliminar todos los gastos</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">
+        Vas a eliminar <b style="color:var(--text);">${total}</b> gasto${total!==1?'s':''}. <b style="color:#fca5a5;">Esta acción no se puede deshacer.</b>
+      </p>
+      <div style="padding:10px 14px; background:var(--surface-2); border-radius:8px; margin-bottom:12px;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin-bottom:6px; font-weight:600;">Desglose por categoría</div>
+        ${catList}
+      </div>
+      <div class="field">
+        <label style="color:#fca5a5;">Para confirmar, escribí <b>ELIMINAR</b> abajo:</label>
+        <input class="input" id="delExpConfirm" placeholder="ELIMINAR" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn danger" id="delExpGo" disabled>Eliminar los ${total}</button>
+      </div>`;
+    openModal(html, true);
+    const goBtn = $('delExpGo');
+    $('delExpConfirm').addEventListener('input', e => {
+      goBtn.disabled = e.target.value.trim().toUpperCase() !== 'ELIMINAR';
+    });
+    goBtn.onclick = async () => {
+      const toDelete = [...store.expenses];
+      store.expenses = [];
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+        for (const g of toDelete) { try { await window.cloudSync.deleteDoc('expenses', g.id); } catch(e){} }
+      }
+      closeModal();
+      renderContabilidad(); renderDashboard();
+      toast(`${toDelete.length} gasto${toDelete.length!==1?'s':''} eliminado${toDelete.length!==1?'s':''} ✓`);
     };
   };
   $('fileImportTN').onchange = e => {
