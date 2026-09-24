@@ -2543,6 +2543,7 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
         <div style="display:flex; gap:8px;">
           <button class="btn" id="btnImportTN">📥 Importar Tienda Nube (CSV)</button>
           <button class="btn" id="cntSaldoInit">💼 Saldo inicial</button>
+          <button class="btn danger" id="btnDelAllSales" title="Eliminar ventas en lote">🗑 Eliminar ventas</button>
           <input type="file" id="fileImportTN" accept=".csv,text/csv" style="display:none;">
         </div>
       </div>
@@ -5445,6 +5446,70 @@ compute();
   }
 
   $('btnImportTN').onclick = () => $('fileImportTN').click();
+
+  // ================= Eliminar ventas en lote =================
+  $('btnDelAllSales').onclick = () => {
+    const total = store.sales.length;
+    const importadas = store.sales.filter(s => s.orderNumber).length;
+    const manuales = total - importadas;
+    if (total === 0) { toast('No hay ventas para eliminar'); return; }
+    const html = `<h3 style="color:#fca5a5;">🗑 Eliminar ventas</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">
+        Elegí qué querés eliminar. <b style="color:#fca5a5;">Esta acción no se puede deshacer.</b>
+      </p>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer;">
+          <input type="radio" name="delMode" value="all" checked>
+          <div>
+            <b style="color:var(--text);">Eliminar TODAS las ventas</b>
+            <div style="font-size:11.5px; color:var(--text-faint);">${total} ventas — arranca de cero.</div>
+          </div>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer; ${manuales === 0 ? 'opacity:.4; pointer-events:none;' : ''}">
+          <input type="radio" name="delMode" value="manual" ${manuales === 0 ? 'disabled' : ''}>
+          <div>
+            <b style="color:var(--text);">Solo las cargadas a mano</b>
+            <div style="font-size:11.5px; color:var(--text-faint);">${manuales} venta${manuales!==1?'s':''} sin Nº de orden (agregadas con "Crear venta").</div>
+          </div>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; cursor:pointer; ${importadas === 0 ? 'opacity:.4; pointer-events:none;' : ''}">
+          <input type="radio" name="delMode" value="csv" ${importadas === 0 ? 'disabled' : ''}>
+          <div>
+            <b style="color:var(--text);">Solo las importadas de Tienda Nube (CSV)</b>
+            <div style="font-size:11.5px; color:var(--text-faint);">${importadas} venta${importadas!==1?'s':''} con Nº de orden.</div>
+          </div>
+        </label>
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label style="color:#fca5a5;">Para confirmar, escribí <b>ELIMINAR</b> abajo:</label>
+        <input class="input" id="delSalesConfirm" placeholder="ELIMINAR" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn danger" id="delSalesGo" disabled>Eliminar</button>
+      </div>`;
+    openModal(html, true);
+    const goBtn = $('delSalesGo');
+    $('delSalesConfirm').addEventListener('input', e => {
+      goBtn.disabled = e.target.value.trim().toUpperCase() !== 'ELIMINAR';
+    });
+    goBtn.onclick = async () => {
+      const mode = document.querySelector('input[name="delMode"]:checked').value;
+      let toDelete;
+      if (mode === 'all') toDelete = [...store.sales];
+      else if (mode === 'manual') toDelete = store.sales.filter(s => !s.orderNumber);
+      else toDelete = store.sales.filter(s => s.orderNumber);
+      // Aplicar
+      store.sales = store.sales.filter(s => !toDelete.some(d => d.id === s.id));
+      saveLocal();
+      if (window.cloudSync && window.cloudSync.isLoggedIn()) {
+        for (const s of toDelete) { try { await window.cloudSync.deleteDoc('sales', s.id); } catch(e){} }
+      }
+      closeModal();
+      renderContabilidad(); renderDashboard();
+      toast(`${toDelete.length} venta${toDelete.length!==1?'s':''} eliminada${toDelete.length!==1?'s':''} ✓`);
+    };
+  };
   $('fileImportTN').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     const rd = new FileReader();
