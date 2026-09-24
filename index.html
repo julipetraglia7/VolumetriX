@@ -1448,6 +1448,23 @@ table.simple tr:hover td { background: rgba(255,255,255,.02); }
   width: 44px; height: 44px; font-size: 18px;
 }
 
+/* ===== Botones ± para ajuste rápido de stock en inventario ===== */
+.vx-stock-btn {
+  border-radius: 6px !important;
+  transition: background .12s, transform .08s;
+}
+.vx-stock-btn:active { transform: scale(.92); }
+.vx-stock-in {
+  color: #6ee7a7 !important;
+  background: rgba(74,222,128,.10) !important;
+}
+.vx-stock-in:hover { background: rgba(74,222,128,.22) !important; }
+.vx-stock-out {
+  color: #fca5a5 !important;
+  background: rgba(239,68,68,.10) !important;
+}
+.vx-stock-out:hover { background: rgba(239,68,68,.22) !important; }
+
 /* ===== KPI grid: 3 columnas × 2 filas ===== */
 #cntKpis {
   grid-template-columns: repeat(3, 1fr) !important;
@@ -4061,7 +4078,8 @@ compute();
         <span class="inv-stock ${low ? 'low' : ''}">${(m.stock || 0).toLocaleString('es-AR')} ${esc(m.unidad || 'g')}</span>
         <span class="inv-price">${m.category === 'Filamento' ? `${fmtMoney(m.pricePerKg || (m.pricePerUnit || 0) * 1000)}/kg` : `${fmtMoney(m.pricePerUnit || m.pricePerKg || 0)}/${esc(m.unidad || 'u')}`}</span>
         <div class="inv-actions">
-          <button class="icon-btn" data-inv-move="${esc(m.id)}" title="Ajustar stock (± o historial)" style="color:var(--accent-magenta);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="icon-btn vx-stock-btn vx-stock-in" data-inv-move-in="${esc(m.id)}" title="Sumar stock (+)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="icon-btn vx-stock-btn vx-stock-out" data-inv-move-out="${esc(m.id)}" title="Descontar stock (−) — ${esc(m.category === 'Filamento' ? 'gramos' : m.unidad || 'unidades')}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button>
           <button class="icon-btn" data-inv-edit="${esc(m.id)}" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="icon-btn danger" data-inv-del="${esc(m.id)}" title="Eliminar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
         </div>
@@ -4069,7 +4087,8 @@ compute();
     }).join('');
     body.querySelectorAll('[data-inv-edit]').forEach(b => b.onclick = e => editInventoryItem(e.currentTarget.dataset.invEdit));
     body.querySelectorAll('[data-inv-del]').forEach(b => b.onclick = e => deleteInventoryItem(e.currentTarget.dataset.invDel));
-    body.querySelectorAll('[data-inv-move]').forEach(b => b.onclick = e => openStockAdjustModal(e.currentTarget.dataset.invMove));
+    body.querySelectorAll('[data-inv-move-in]').forEach(b => b.onclick = e => openStockAdjustModal(e.currentTarget.dataset.invMoveIn, 'ingreso'));
+    body.querySelectorAll('[data-inv-move-out]').forEach(b => b.onclick = e => openStockAdjustModal(e.currentTarget.dataset.invMoveOut, 'egreso'));
   }
   function tabMatches(x){
     if (invTab === 'materiales') return ['Filamento','Insumos','Packaging','Resina','Otro'].indexOf(x.category) > -1;
@@ -4403,9 +4422,10 @@ compute();
     wireInventoryForm(it);
   }
   // ============ Ajuste manual de stock (movimientos) ============
-  function openStockAdjustModal(id){
+  function openStockAdjustModal(id, presetTipo){
     const it = store.inventory.find(x => x.id === id);
     if (!it) return;
+    if (!presetTipo) presetTipo = 'ingreso';
     const moves = Array.isArray(it.movimientos) ? [...it.movimientos] : [];
     // Ordenar de más nuevo a más viejo
     moves.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.createdAt || 0) - (a.createdAt || 0));
@@ -4431,8 +4451,8 @@ compute();
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); margin:6px 0; font-weight:600;">Nuevo movimiento</div>
       <div class="field"><label>Tipo</label>
         <div class="seg-pick">
-          <button data-mv-tipo="ingreso" class="on" style="color:#6ee7a7;">+ Ingreso (sumar)</button>
-          <button data-mv-tipo="egreso" style="color:#fca5a5;">− Egreso (descontar)</button>
+          <button data-mv-tipo="ingreso" class="${presetTipo === 'ingreso' ? 'on' : ''}" style="color:#6ee7a7;">+ Ingreso (sumar)</button>
+          <button data-mv-tipo="egreso" class="${presetTipo === 'egreso' ? 'on' : ''}" style="color:#fca5a5;">− Egreso (descontar)</button>
         </div>
       </div>
       <div class="field-row">
